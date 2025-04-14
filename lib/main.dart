@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'user_model.dart';
 import 'screens/baby_profile.dart';
 import 'screens/db_helper.dart'; // Make sure you import DBHelper
+import 'screens/meal_plan.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,10 @@ class MyApp extends StatelessWidget {
           '/login': (context) => LoginScreen(),
           '/register': (context) => RegisterScreen(),
           '/home': (context) => HomeScreen(),
+           '/meal-plan': (context) => MealPlanScreen(
+             babyName: 'Default Baby',
+    babyAgeMonths: 6,
+           ),
         },
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
-//import 'package:path/path.dart';
 import './db_helper.dart';
+import './meal_plan.dart';
 
 class BabyProfileScreen extends StatefulWidget {
   const BabyProfileScreen({super.key});
@@ -22,11 +22,11 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchProfiles();  // Load the profiles when the screen initializes
+    _fetchProfiles();
   }
 
   Future<void> _fetchProfiles() async {
-    final profiles = await DBHelper.getBabyProfiles();  // Get profiles from DBHelper
+    final profiles = await DBHelper.getBabyProfiles();
     setState(() {
       _babyProfiles = profiles;
     });
@@ -39,10 +39,9 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     final height = double.tryParse(_heightController.text) ?? 0.0;
 
     try {
-      // Insert the new profile into the database
       await DBHelper.insertBabyProfile(name, age, weight, height);
-      await _fetchProfiles();  // Refresh the profile list
-      _clearInputs();  // Clear the input fields
+      await _fetchProfiles();
+      _clearInputs();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Baby profile added successfully!')),
       );
@@ -62,10 +61,9 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     final height = double.tryParse(_heightController.text) ?? 0.0;
 
     try {
-      // Update the selected profile in the database
       await DBHelper.updateBabyProfile(_selectedProfileId!, name, age, weight, height);
-      await _fetchProfiles();  // Refresh the profile list
-      _clearInputs();  // Clear the input fields
+      await _fetchProfiles();
+      _clearInputs();
       setState(() => _selectedProfileId = null);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Baby profile updated successfully!')),
@@ -79,10 +77,9 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
 
   Future<void> _deleteProfile(int id) async {
     try {
-      // Delete the selected profile from the database
       await DBHelper.deleteBabyProfile(id);
-      await _fetchProfiles();  // Refresh the profile list
-      _clearInputs();  // Clear the input fields
+      await _fetchProfiles();
+      _clearInputs();
       setState(() => _selectedProfileId = null);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Baby profile deleted successfully!')),
@@ -123,7 +120,6 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Input Fields for Baby Profile
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
@@ -179,7 +175,6 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            // Display List of Baby Profiles
             Expanded(
               child: ListView.builder(
                 itemCount: _babyProfiles.length,
@@ -188,12 +183,47 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
                   return Card(
                     child: ListTile(
                       title: Text(profile['name']),
-                      onTap: () => _populateFields(profile), // On tap, populate fields for update
+                      onTap: () => _populateFields(profile),
                     ),
                   );
                 },
               ),
-            )
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+
+                if (_nameController.text.isNotEmpty && _ageController.text.isNotEmpty) {
+  final String name = _nameController.text;
+  final int age = int.tryParse(_ageController.text) ?? 0;
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MealPlanScreen(
+        babyName: name,
+        babyAgeMonths: age,
+      ),
+    ),
+  );
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Please select or fill in a baby profile')),
+  );
+}
+
+               // Navigator.push(
+                  //context,
+                  //MaterialPageRoute(builder: (context) => MealPlanScreen()),
+                //);
+              },
+              icon: Icon(Icons.restaurant_menu),
+              label: Text('View Meal Plan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pinkAccent,
+                foregroundColor: Colors.white,
+              ),
+            ),
           ],
         ),
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
 import 'baby_profile.dart';
+import './meal_plan.dart'; // Adjust the path if needed
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -80,7 +82,24 @@ class HomeScreen extends StatelessWidget {
                     onTap: () => _goToBabyProfile(context),
                     child: _buildDashboardCard("👶 Baby Profile", "Name, Age, Last Feeding"),
                   ),
-                  _buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
+                    GestureDetector(
+  onTap: () {
+
+
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MealPlanScreen(
+          babyName: 'willo',
+          babyAgeMonths: 15,
+        ),
+      ),
+    );
+  },
+  child: _buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
+),
+                  //_buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
                   _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
                   _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
                   _buildDashboardCard("📅 Daily Routine", "Sleep, Play, Feeding"),
