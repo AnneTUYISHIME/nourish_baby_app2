@@ -9,6 +9,7 @@ import 'screens/db_helper.dart'; // Make sure you import DBHelper
 import 'screens/meal_plan.dart';
 
 void main() async {
+   
   WidgetsFlutterBinding.ensureInitialized();
 
   // 🚨 Delete the old DB to force recreation (only once while testing)
@@ -24,6 +25,7 @@ void main() async {
   } catch (e) {
     print('❌ Error fetching baby profiles: $e');
   }*/
+   
 
   runApp(MyApp());
 }
