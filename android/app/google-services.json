@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "237507548270",
+    "project_id": "babynourish-3ca74",
+    "storage_bucket": "babynourish-3ca74.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:237507548270:android:8df6d4be9b9c61616dc27f",
+        "android_client_info": {
+          "package_name": "com.example.nourish_baby_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJWb_7rxQHpbngPzJSA39MKh20b5EsSlw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

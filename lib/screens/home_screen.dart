@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
 import 'baby_profile.dart';
 import './meal_plan.dart'; // Adjust the path if needed
-
+import './health_tracker.dart'; // ✅ Added this line for Health Tracker
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -20,7 +20,15 @@ class HomeScreen extends StatelessWidget {
   void _goToBabyProfile(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) =>  BabyProfileScreen()),
+      MaterialPageRoute(builder: (context) => BabyProfileScreen()),
+    );
+  }
+
+  // ✅ Navigate to Health Tracker Screen
+  void _goToHealthTracker(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => HealthTrackerScreen()),
     );
   }
 
@@ -82,25 +90,24 @@ class HomeScreen extends StatelessWidget {
                     onTap: () => _goToBabyProfile(context),
                     child: _buildDashboardCard("👶 Baby Profile", "Name, Age, Last Feeding"),
                   ),
-                    GestureDetector(
-  onTap: () {
-
-
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MealPlanScreen(
-          babyName: 'willo',
-          babyAgeMonths: 15,
-        ),
-      ),
-    );
-  },
-  child: _buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
-),
-                  //_buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
-                  _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MealPlanScreen(
+                            babyName: 'willo',
+                            babyAgeMonths: 15,
+                          ),
+                        ),
+                      );
+                    },
+                    child: _buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
+                  ),
+                  GestureDetector(
+                    onTap: () => _goToHealthTracker(context), // ✅ Added gesture for health tracker
+                    child: _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
+                  ),
                   _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
                   _buildDashboardCard("📅 Daily Routine", "Sleep, Play, Feeding"),
                 ],

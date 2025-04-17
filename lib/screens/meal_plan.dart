@@ -1,16 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
 import 'more_tips.dart';
 
-class MealPlanScreen extends StatelessWidget {
+class MealPlanScreen extends StatefulWidget {
   final String babyName;
   final int babyAgeMonths;
 
   MealPlanScreen({required this.babyName, required this.babyAgeMonths});
 
   @override
+  _MealPlanScreenState createState() => _MealPlanScreenState();
+}
+
+class _MealPlanScreenState extends State<MealPlanScreen> {
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+    _scheduleFeedingReminder(); // Schedule the daily notification
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+    tz.initializeTimeZones(); // Important for zonedSchedule
+  }
+
+  Future<void> _scheduleFeedingReminder() async {
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0,
+      'Feeding Time 🍽️',
+      "Time to feed ${widget.babyName}! Let’s keep that tummy happy 😊",
+      _nextInstanceOfFeedingTime(),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'meal_plan_channel',
+          'Meal Plan Notifications',
+          channelDescription: 'Reminders for baby feeding times',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+      // true,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+
+       //dateInterpretation: DateInterpretation.absoluteTime, // ✅ Updated this line
+  matchDateTimeComponents: DateTimeComponents.time,     // ✅ This is still correct
+ // androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ Also correct
+
+          //  dateInterpretation: DateInterpretation.absoluteTime,
+      //uiLocalNotificationDateInterpretation:
+         // UILocalNotificationDateInterpretation.absoluteTime,
+     // matchDateTimeComponents: DateTimeComponents.time, // Daily
+      //androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ Required for newer versions
+    );
+  }
+
+  tz.TZDateTime _nextInstanceOfFeedingTime() {
+    final now = tz.TZDateTime.now(tz.local);
+    final scheduledTime = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, 10); // e.g., 10:00 AM daily
+
+    return scheduledTime.isBefore(now)
+        ? scheduledTime.add(Duration(days: 1))
+        : scheduledTime;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bool isBabyOlder = babyAgeMonths >= 6;
-    final Map<String, List<Map<String, String>>> weeklyMeals = getWeeklyMeals(babyAgeMonths);
+    final bool isBabyOlder = widget.babyAgeMonths >= 6;
+    final Map<String, List<Map<String, String>>> weeklyMeals =
+        getWeeklyMeals(widget.babyAgeMonths);
 
     return Scaffold(
       backgroundColor: Colors.pink[50],
@@ -38,7 +111,7 @@ class MealPlanScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    "Welcome $babyName 👶",
+                    "Welcome ${widget.babyName} 👶",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -122,25 +195,24 @@ class MealPlanScreen extends StatelessWidget {
                     ),
             ),
             SizedBox(height: 10),
-           ElevatedButton.icon(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => MoreTipsScreen()),
-    );
-  },
-  icon: Icon(Icons.lightbulb_outline),
-  label: Text("More Tips"),
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.lightBlue[200],
-    foregroundColor: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(30),
-    ),
-    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-  ),
-),
-
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MoreTipsScreen()),
+                );
+              },
+              icon: Icon(Icons.lightbulb_outline),
+              label: Text("More Tips"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue[200],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
             SizedBox(height: 10),
           ],
         ),
@@ -149,7 +221,6 @@ class MealPlanScreen extends StatelessWidget {
   }
 
   Map<String, List<Map<String, String>>> getWeeklyMeals(int ageMonths) {
-    // Feeding interval depends on baby's age
     String timeInterval = ageMonths < 12 ? "Every 3-4 hours" : "Every 4-5 hours";
 
     return {

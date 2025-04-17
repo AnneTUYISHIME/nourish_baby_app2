@@ -7,10 +7,19 @@ import 'user_model.dart';
 import 'screens/baby_profile.dart';
 import 'screens/db_helper.dart'; // Make sure you import DBHelper
 import 'screens/meal_plan.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_notification.dart';
 
+
+
+final notificationService = FirebaseNotificationService();
 void main() async {
    
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp();
+  notificationService.initialize();
 
   // 🚨 Delete the old DB to force recreation (only once while testing)
   /*await DBHelper.deleteDatabaseFile();
