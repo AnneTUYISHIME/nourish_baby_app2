@@ -11,11 +11,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_notification.dart';
 
-
-
 final notificationService = FirebaseNotificationService();
+
 void main() async {
-   
   WidgetsFlutterBinding.ensureInitialized();
   
   await Firebase.initializeApp();
@@ -35,7 +33,6 @@ void main() async {
     print('❌ Error fetching baby profiles: $e');
   }*/
    
-
   runApp(MyApp());
 }
 
@@ -60,10 +57,93 @@ class MyApp extends StatelessWidget {
           '/login': (context) => LoginScreen(),
           '/register': (context) => RegisterScreen(),
           '/home': (context) => HomeScreen(),
-           '/meal-plan': (context) => MealPlanScreen(
-             babyName: 'Default Baby',
-    babyAgeMonths: 6,
-           ),
+          '/meal-plan': (context) => MealPlanScreen(
+            babyName: 'Default Baby',
+            babyAgeMonths: 6,
+          ),
+        },
+      ),
+    );
+  }
+}
+
+// 🧠 The HomeScreen, where notifications can be sent and history viewed
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // 📝 List to keep notification history
+  List<String> _notificationHistory = [];
+
+  // 🚀 This sends a notification and adds it to history
+  void _sendNotification() {
+    String message = "Hey, it's time for Willo to take Panadol";
+
+    setState(() {
+      _notificationHistory.add(message);
+    });
+
+    // ✅ Show a small success message at the bottom
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Notification sent!")),
+    );
+  }
+
+  // 🔁 This opens the Notification History screen
+  void _viewHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NotificationHistoryScreen(
+          history: _notificationHistory,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Willo\'s Care Reminder')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: _sendNotification,
+              child: Text("Send Notification"),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _viewHistory,
+              child: Text("View Notification History"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 📜 This is the Notification History screen that shows the list of notifications
+class NotificationHistoryScreen extends StatelessWidget {
+  final List<String> history;
+
+  NotificationHistoryScreen({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Notification History")),
+      body: ListView.builder(
+        itemCount: history.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: Icon(Icons.notifications),
+            title: Text(history[index]),
+          );
         },
       ),
     );

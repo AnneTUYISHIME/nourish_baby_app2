@@ -41,8 +41,6 @@ dependencies:
   intl: ^0.18.1
   timezone: ^0.10.0
 
-
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -69,9 +67,7 @@ flutter:
   uses-material-design: true
 
 assets:
-  - images/baby_bottle.png
-  - images/teddy_bear.png
-  - images/fruit_bowl.png
+  - assets/sounds/notification_sound.mp3
 
   # To add assets to your application, add an assets section, like this:
   # assets:

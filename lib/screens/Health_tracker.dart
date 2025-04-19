@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:async';
 
 class HealthTrackerScreen extends StatefulWidget {
   const HealthTrackerScreen({super.key});
@@ -18,6 +20,7 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   final TextEditingController _medTypeController = TextEditingController();
 
   String? _selectedFood;
+  Map<String, String> _foodSuggestions = {};
   bool? _likedFood;
   String _suggestion = '';
   TimeOfDay? _medTime;
@@ -41,80 +44,130 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  List<String> _notificationHistory = [];
+
   @override
   void initState() {
     super.initState();
     _initializeNotifications();
+    _configureFirebaseMessaging();
   }
 
   void _initializeNotifications() {
     tz_data.initializeTimeZones();
 
-    const AndroidInitializationSettings androidInitializationSettings =
+    const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: androidInitializationSettings);
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    const InitializationSettings initSettings =
+        InitializationSettings(android: androidSettings);
+
+    flutterLocalNotificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (details) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => NotificationHistoryScreen(
+                  history: _notificationHistory)),
+        );
+      },
+    );
+  }
+
+  void _configureFirebaseMessaging() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showLocalNotification(message.notification?.title ?? "Reminder",
+          message.notification?.body ?? "It's time for medication!");
+    });
+  }
+
+  void _showLocalNotification(String title, String body) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'med_channel_id',
+      'Medication Reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      details,
+    );
+
+    setState(() {
+      _notificationHistory.add("$title: $body at ${DateFormat.Hm().format(DateTime.now())}");
+    });
   }
 
   Future<void> _scheduleMedReminder(TimeOfDay time, String medName) async {
     final now = DateTime.now();
+    final scheduledTime =
+        DateTime(now.year, now.month, now.day, time.hour, time.minute);
 
-    final scheduledTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      time.hour,
-      time.minute,
-    );
-
-    final tz.TZDateTime scheduledTZ = tz.TZDateTime.from(
-      scheduledTime,
-      tz.local,
-    );
+    final tz.TZDateTime scheduledTZ =
+        tz.TZDateTime.from(scheduledTime, tz.local);
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'med_channel_id',
       'Medication Reminders',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
     );
 
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidDetails,
-    );
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidDetails);
 
-    // Removed androidAllowWhileIdle parameter
     await flutterLocalNotificationsPlugin.zonedSchedule(
       0,
-      'Medication Time',
-      'Time to give baby $medName',
+      '💊 Medication Reminder',
+      'It’s time to give baby $medName',
       scheduledTZ,
       notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      // No need to specify androidAllowWhileIdle here
+     // uiLocalNotificationDateInterpretation:
+        //  UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
   void _generateSuggestion() {
     String symptoms = _symptomsController.text.toLowerCase();
 
+    String result;
     if (symptoms.contains("rash") || symptoms.contains("itching")) {
-      _suggestion =
-          "⚠️ This could be a skin reaction. Try avoiding citrus or tomato-based foods. Try apple or pear puree.";
-    } else if (symptoms.contains("vomiting") ||
-        symptoms.contains("diarrhea")) {
-      _suggestion =
-          "🚫 Signs of digestive issue. Avoid dairy or too much fiber. Try rice cereal or banana mash.";
+      result =
+          "⚠️ This could be a skin reaction. Avoid citrus or tomatoes. Try apple or pear puree.";
+    } else if (symptoms.contains("vomiting") || symptoms.contains("diarrhea")) {
+      result =
+          "🚫 Digestive issue suspected. Avoid dairy/fiber. Try rice cereal or banana mash.";
     } else if (symptoms.isEmpty) {
-      _suggestion = "Please enter some symptoms to analyze.";
+      result = "Please enter some symptoms to analyze.";
     } else {
-      _suggestion =
-          "👩‍⚕️ Keep monitoring. If symptoms persist, consult a pediatrician.";
+      result = "👩‍⚕️ Monitor symptoms. Consult pediatrician if it persists.";
     }
 
-    setState(() {});
+    if (_selectedFood != null) {
+      _foodSuggestions[_selectedFood!] = result;
+    }
+
+    setState(() {
+      _suggestion = result;
+    });
   }
 
   Future<void> _pickTime() async {
@@ -137,6 +190,20 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     }
   }
 
+  void _handleLikeDislike(bool like) {
+    if (_likedFood == like) {
+      _likedFood = null;
+      if (like) _likeCount--; else _dislikeCount--;
+    } else {
+      if (_likedFood == true) _likeCount--;
+      if (_likedFood == false) _dislikeCount--;
+
+      _likedFood = like;
+      if (like) _likeCount++; else _dislikeCount++;
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,13 +217,28 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
         ),
         title: const Text("🩺 Health Tracker",
             style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NotificationHistoryScreen(
+                    history: _notificationHistory,
+                  ),
+                ),
+              );
+            },
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            Text("🍼 What food did baby eat?",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text("🍼 What food did baby eat?",
+                style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: _selectedFood,
               hint: const Text("Select food"),
@@ -167,10 +249,8 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
               onChanged: (val) => setState(() => _selectedFood = val),
             ),
             const SizedBox(height: 20),
-
-            // Symptoms
-            Text("📋 Any symptoms after eating?",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text("📋 Any symptoms after eating?",
+                style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _symptomsController,
               decoration: const InputDecoration(
@@ -179,10 +259,60 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
               ),
               maxLines: 3,
             ),
-
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _generateSuggestion,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                minimumSize: const Size(150, 40),
+              ),
+              child: const Text("Check Suggestions",
+                  style: TextStyle(color: Colors.white)),
+            ),
+            if (_selectedFood != null &&
+                _foodSuggestions[_selectedFood!] != null) ...[
+              const SizedBox(height: 10),
+              const Text("💡 Suggestion:",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(_foodSuggestions[_selectedFood!]!,
+                  style: const TextStyle(color: Colors.black87)),
+            ],
             const SizedBox(height: 20),
-            Text("💊 Baby's Current Medication:",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text("👍 Did baby like the food?",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Column(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.thumb_up,
+                          color: _likedFood == true
+                              ? Colors.green
+                              : Colors.grey),
+                      onPressed: () => _handleLikeDislike(true),
+                    ),
+                    Text("$_likeCount likes"),
+                  ],
+                ),
+                const SizedBox(width: 30),
+                Column(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.thumb_down,
+                          color: _likedFood == false
+                              ? Colors.red
+                              : Colors.grey),
+                      onPressed: () => _handleLikeDislike(false),
+                    ),
+                    Text("$_dislikeCount dislikes"),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text("💊 Baby's Current Medication:",
+                style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _medNameController,
               decoration: const InputDecoration(labelText: "Medication Name"),
@@ -217,75 +347,39 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
             ElevatedButton(
               onPressed: _submitMedication,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink,
+                backgroundColor: Colors.lightBlue,
                 minimumSize: const Size(150, 40),
               ),
               child: const Text("Save Medication",
                   style: TextStyle(color: Colors.white)),
             ),
-
-            const SizedBox(height: 20),
-            Text("👍 Did baby like the food?",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Column(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.thumb_up,
-                          color: _likedFood == true
-                              ? Colors.green
-                              : Colors.grey),
-                      onPressed: () {
-                        setState(() {
-                          _likedFood = true;
-                          _likeCount++;
-                        });
-                      },
-                    ),
-                    Text("$_likeCount likes"),
-                  ],
-                ),
-                const SizedBox(width: 30),
-                Column(
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.thumb_down,
-                          color: _likedFood == false
-                              ? Colors.red
-                              : Colors.grey),
-                      onPressed: () {
-                        setState(() {
-                          _likedFood = false;
-                          _dislikeCount++;
-                        });
-                      },
-                    ),
-                    Text("$_dislikeCount dislikes"),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _generateSuggestion,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue,
-                minimumSize: const Size(150, 40),
-              ),
-              child: const Text("Check Suggestions",
-                  style: TextStyle(color: Colors.white)),
-            ),
-            if (_suggestion.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Text("💡 Suggestion:",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(_suggestion, style: const TextStyle(color: Colors.black87)),
-            ]
           ],
         ),
+      ),
+    );
+  }
+}
+
+class NotificationHistoryScreen extends StatelessWidget {
+  final List<String> history;
+
+  const NotificationHistoryScreen({super.key, required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("📜 Notification History"),
+        backgroundColor: Colors.lightBlue,
+      ),
+      body: ListView.builder(
+        itemCount: history.length,
+        itemBuilder: (_, index) {
+          return ListTile(
+            title: Text(history[index]),
+            leading: const Icon(Icons.notification_important),
+          );
+        },
       ),
     );
   }
