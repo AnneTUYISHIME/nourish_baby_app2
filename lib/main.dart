@@ -10,10 +10,38 @@ import 'screens/meal_plan.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_notification.dart';
+import 'package:timezone/data/latest.dart' as tzData;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:nourish_baby_app/screens/notification_service.dart';
+
+import 'dart:io';
 
 final notificationService = FirebaseNotificationService();
 
+/*Future<void> _requestPermissions() async {
+  if (Platform.isAndroid) {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.requestPermission();
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('✅ User granted permission');
+    } else {
+      print('❌ User declined or has not accepted permission');
+    }
+  }
+} */
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('🔔 BG Message: ${message.messageId}');
+}
+
 void main() async {
+
+    WidgetsFlutterBinding.ensureInitialized();
+  tzData.initializeTimeZones();
+  await NotificationService.init();
+
+  //await NotificationService().init(); // Initialize notifications
   WidgetsFlutterBinding.ensureInitialized();
   
   await Firebase.initializeApp();
