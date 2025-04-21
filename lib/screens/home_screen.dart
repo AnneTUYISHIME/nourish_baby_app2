@@ -4,6 +4,7 @@ import 'login_screen.dart';
 import 'baby_profile.dart';
 import './meal_plan.dart'; // Adjust the path if needed
 import './health_tracker.dart'; // ✅ Added this line for Health Tracker
+import './growth_status.dart'; // ✅ Import the Growth Stats screen
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,20 @@ class HomeScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => HealthTrackerScreen()),
+    );
+  }
+
+  // ✅ Navigate to Growth Stats Screen
+  void _goToGrowthStats(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => GrowthStatusScreen(
+        babyName: 'Baby Name',  // Replace with actual data
+      babyAgeMonths: 6,       // Replace with actual data
+      babyWeight: 6.2,        // Replace with actual data
+      babyHeight: 63.0,       // Replace with actual data
+    ),
+      )
     );
   }
 
@@ -108,7 +123,10 @@ class HomeScreen extends StatelessWidget {
                     onTap: () => _goToHealthTracker(context), // ✅ Added gesture for health tracker
                     child: _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
                   ),
-                  _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
+                  GestureDetector(
+                    onTap: () => _goToGrowthStats(context), // ✅ Make Growth Stats clickable
+                    child: _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
+                  ),
                   _buildDashboardCard("📅 Daily Routine", "Sleep, Play, Feeding"),
                 ],
               ),

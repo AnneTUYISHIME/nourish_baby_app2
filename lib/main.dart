@@ -13,54 +13,25 @@ import 'firebase_notification.dart';
 import 'package:timezone/data/latest.dart' as tzData;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:nourish_baby_app/screens/notification_service.dart';
+import 'screens/growth_status.dart'; // ✅ Added new screen import
 
 import 'dart:io';
 
 final notificationService = FirebaseNotificationService();
 
-/*Future<void> _requestPermissions() async {
-  if (Platform.isAndroid) {
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    NotificationSettings settings = await messaging.requestPermission();
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ User granted permission');
-    } else {
-      print('❌ User declined or has not accepted permission');
-    }
-  }
-} */
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print('🔔 BG Message: ${message.messageId}');
 }
 
 void main() async {
-
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   tzData.initializeTimeZones();
   await NotificationService.init();
 
-  //await NotificationService().init(); // Initialize notifications
-  WidgetsFlutterBinding.ensureInitialized();
-  
   await Firebase.initializeApp();
   notificationService.initialize();
 
-  // 🚨 Delete the old DB to force recreation (only once while testing)
-  /*await DBHelper.deleteDatabaseFile();
-
-  // Initialize DB to recreate tables
-  await DBHelper.init();
-
-  // ✅ TEST: Check if baby_profile table is working
-  try {
-    final profiles = await DBHelper.getBabyProfiles();
-    print('✅ Baby Profiles Found: ${profiles.length}');
-  } catch (e) {
-    print('❌ Error fetching baby profiles: $e');
-  }*/
-   
   runApp(MyApp());
 }
 
@@ -89,6 +60,8 @@ class MyApp extends StatelessWidget {
             babyName: 'Default Baby',
             babyAgeMonths: 6,
           ),
+          // You can add a named route too if needed
+          // '/growth-stats': (context) => GrowthStatsScreen(),
         },
       ),
     );
@@ -102,10 +75,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 📝 List to keep notification history
   List<String> _notificationHistory = [];
 
-  // 🚀 This sends a notification and adds it to history
   void _sendNotification() {
     String message = "Hey, it's time for Willo to take Panadol";
 
@@ -113,13 +84,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _notificationHistory.add(message);
     });
 
-    // ✅ Show a small success message at the bottom
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Notification sent!")),
     );
   }
 
-  // 🔁 This opens the Notification History screen
   void _viewHistory() {
     Navigator.push(
       context,
@@ -128,6 +97,21 @@ class _HomeScreenState extends State<HomeScreen> {
           history: _notificationHistory,
         ),
       ),
+    );
+  }
+
+  void _viewGrowthStats() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GrowthStatusScreen(
+          babyName: 'Baby Name',  
+      babyAgeMonths: 6,       
+      babyWeight: 6.2,        
+      babyHeight: 63.0,       
+    ),
+        ),
+      
     );
   }
 
@@ -147,6 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               onPressed: _viewHistory,
               child: Text("View Notification History"),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _viewGrowthStats,
+              child: Text("View Baby Growth Stats 📈"),
             ),
           ],
         ),

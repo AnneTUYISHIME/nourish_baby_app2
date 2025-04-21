@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import './db_helper.dart';
 import './meal_plan.dart';
+import './growth_status.dart';
 
 class BabyProfileScreen extends StatefulWidget {
   const BabyProfileScreen({super.key});
@@ -192,35 +193,65 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-
                 if (_nameController.text.isNotEmpty && _ageController.text.isNotEmpty) {
-  final String name = _nameController.text;
-  final int age = int.tryParse(_ageController.text) ?? 0;
+                  final String name = _nameController.text;
+                  final int age = int.tryParse(_ageController.text) ?? 0;
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => MealPlanScreen(
-        babyName: name,
-        babyAgeMonths: age,
-      ),
-    ),
-  );
-} else {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Please select or fill in a baby profile')),
-  );
-}
-
-               // Navigator.push(
-                  //context,
-                  //MaterialPageRoute(builder: (context) => MealPlanScreen()),
-                //);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MealPlanScreen(
+                        babyName: name,
+                        babyAgeMonths: age,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please select or fill in a baby profile')),
+                  );
+                }
               },
               icon: Icon(Icons.restaurant_menu),
               label: Text('View Meal Plan'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.pinkAccent,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (_nameController.text.isNotEmpty &&
+                    _ageController.text.isNotEmpty &&
+                    _weightController.text.isNotEmpty &&
+                    _heightController.text.isNotEmpty) {
+                  final String name = _nameController.text;
+                  final int age = int.tryParse(_ageController.text) ?? 0;
+                  final double weight = double.tryParse(_weightController.text) ?? 0.0;
+                  final double height = double.tryParse(_heightController.text) ?? 0.0;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GrowthStatusScreen(
+                        babyName: name,
+                        babyAgeMonths: age,
+                        babyWeight: weight,
+                        babyHeight: height,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please select or fill in a baby profile')),
+                  );
+                }
+              },
+              icon: Icon(Icons.show_chart),
+              label: Text('View Growth Status'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
               ),
             ),
