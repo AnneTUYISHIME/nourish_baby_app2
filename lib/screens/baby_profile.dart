@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import './db_helper.dart';
 import './meal_plan.dart';
-import './growth_status.dart';
+import 'growth_status.dart';
 
 class BabyProfileScreen extends StatefulWidget {
   const BabyProfileScreen({super.key});
@@ -222,23 +222,20 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
             const SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: () {
-                if (_nameController.text.isNotEmpty &&
-                    _ageController.text.isNotEmpty &&
-                    _weightController.text.isNotEmpty &&
-                    _heightController.text.isNotEmpty) {
-                  final String name = _nameController.text;
-                  final int age = int.tryParse(_ageController.text) ?? 0;
-                  final double weight = double.tryParse(_weightController.text) ?? 0.0;
-                  final double height = double.tryParse(_heightController.text) ?? 0.0;
+                if (_selectedProfileId != null) {
+                  final selectedProfile = _babyProfiles.firstWhere(
+                    (profile) => profile['id'] == _selectedProfileId,
+                  );
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => GrowthStatusScreen(
-                        babyName: name,
-                        babyAgeMonths: age,
-                        babyWeight: weight,
-                        babyHeight: height,
+                        babyId: selectedProfile['id'],
+                        name: selectedProfile['name'],
+                        age: selectedProfile['age'],
+                        weight: selectedProfile['weight'],
+                        height: selectedProfile['height'],
                       ),
                     ),
                   );

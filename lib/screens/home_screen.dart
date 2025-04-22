@@ -5,6 +5,7 @@ import 'baby_profile.dart';
 import './meal_plan.dart'; // Adjust the path if needed
 import './health_tracker.dart'; // ✅ Added this line for Health Tracker
 import './growth_status.dart'; // ✅ Import the Growth Stats screen
+import './db_helper.dart'; // ✅ Import your database helper
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -33,18 +34,31 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // ✅ Navigate to Growth Stats Screen
-  void _goToGrowthStats(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => GrowthStatusScreen(
-        babyName: 'Baby Name',  // Replace with actual data
-      babyAgeMonths: 6,       // Replace with actual data
-      babyWeight: 6.2,        // Replace with actual data
-      babyHeight: 63.0,       // Replace with actual data
-    ),
-      )
-    );
+  // ✅ Updated: Navigate to Growth Stats Screen using actual baby profile data
+  void _goToGrowthStats(BuildContext context) async {
+    final dbHelper = DBHelper();
+   final baby = await DBHelper.getBabyProfile();
+
+
+    if (baby != null) {
+
+      
+     /* Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GrowthStatusScreen(
+            babyName: baby['name'] ?? 'Baby',
+            babyAgeMonths: baby['ageMonths'] ?? 6,
+            babyWeight: baby['weight']?.toDouble() ?? 6.0,
+            babyHeight: baby['height']?.toDouble() ?? 60.0,
+          ),
+        ),
+      );*/
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No baby profile found')),
+      );
+    }
   }
 
   @override
@@ -124,7 +138,7 @@ class HomeScreen extends StatelessWidget {
                     child: _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
                   ),
                   GestureDetector(
-                    onTap: () => _goToGrowthStats(context), // ✅ Make Growth Stats clickable
+                    onTap: () => _goToGrowthStats(context), // ✅ Updated to use dynamic data
                     child: _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
                   ),
                   _buildDashboardCard("📅 Daily Routine", "Sleep, Play, Feeding"),

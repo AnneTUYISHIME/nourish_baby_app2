@@ -1,115 +1,195 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math';
 
 class GrowthStatusScreen extends StatelessWidget {
-  final String babyName;
-  final int babyAgeMonths;
-  final double babyWeight;
-  final double babyHeight;
+  final int babyId;
+  final String name;
+  final int age;
+  final double weight;
+  final double height;
 
-  GrowthStatusScreen({
-    super.key,
-    required this.babyName,
-    required this.babyAgeMonths,
-    required this.babyWeight,
-    required this.babyHeight,
-  });
+  const GrowthStatusScreen({
+    Key? key,
+    required this.babyId,
+    required this.name,
+    required this.age,
+    required this.weight,
+    required this.height,
+  }) : super(key: key);
 
-  // Simulated monthly growth data
-  final List<Map<String, dynamic>> growthData = [
-    {"month": 1, "weight": 3.5, "height": 50.0},
-    {"month": 2, "weight": 4.2, "height": 54.0},
-    {"month": 3, "weight": 5.0, "height": 57.0},
-    {"month": 4, "weight": 5.8, "height": 60.0},
-    {"month": 5, "weight": 5.5, "height": 59.0}, // Simulate drop
-    {"month": 6, "weight": 6.2, "height": 63.0},
-  ];
-
-  double calculateBMI(double weight, double heightCm) {
-    double heightM = heightCm / 100;
-    return weight / pow(heightM, 2);
+  double calculateBMI() {
+    final heightInMeters = height / 100;
+    return weight / (heightInMeters * heightInMeters);
   }
 
-  String getAdvice(double currentWeight, double prevWeight, double currentHeight, double prevHeight) {
-    if (currentWeight < prevWeight || currentHeight < prevHeight) {
-      return "⚠️ Growth has slightly dropped. Consider a pediatric checkup or updating the meal plan.";
+  String getHealthAdvice(double bmi) {
+    if (bmi < 14) {
+      return "Your baby may be underweight. Consider nutritious foods like mashed avocado, sweet potatoes, or bananas. Please consult a pediatrician.";
+    } else if (bmi >= 14 && bmi <= 17) {
+      return "Great job! Your baby’s growth is on track. Keep up the good feeding and care routines 💖";
+    } else {
+      return "Your baby may be gaining weight quickly. Offer a balanced mix of fruits and vegetables, and consult a pediatrician.";
     }
-    return "✅ Growth is progressing well! Keep up the great work!";
+  }
+
+  List<FlSpot> getWeightSpots() {
+    return [
+      FlSpot(1, weight - 2),
+      FlSpot(2, weight - 1.5),
+      FlSpot(3, weight - 1),
+      FlSpot(4, weight - 0.5),
+      FlSpot(age.toDouble(), weight),
+    ];
+  }
+
+  List<FlSpot> getHeightSpots() {
+    return [
+      FlSpot(1, height - 10),
+      FlSpot(2, height - 7),
+      FlSpot(3, height - 5),
+      FlSpot(4, height - 2),
+      FlSpot(age.toDouble(), height),
+    ];
+  }
+
+  List<FlSpot> getCombinedGrowthSpots() {
+    return [
+      FlSpot(weight - 2, height - 10),
+      FlSpot(weight - 1.5, height - 7),
+      FlSpot(weight - 1, height - 5),
+      FlSpot(weight - 0.5, height - 2),
+      FlSpot(weight, height),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final latest = growthData.last;
-    final previous = growthData[growthData.length - 2];
-    final bmi = calculateBMI(latest['weight'], latest['height']);
-    final advice = getAdvice(latest['weight'], previous['weight'], latest['height'], previous['height']);
+    final bmi = calculateBMI();
+    final advice = getHealthAdvice(bmi);
 
     return Scaffold(
-      backgroundColor: Colors.pink[50],
       appBar: AppBar(
-        backgroundColor: Colors.blueAccent,
-        title: Text("📊 Growth Stats of $babyName", style: const TextStyle(color: Colors.white)),
+        title: const Text("Growth Status", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.lightBlue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Baby Growth Overview",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-            ),
-            const SizedBox(height: 20),
-
-            // Chart
-            Expanded(
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: 10,
-                  barTouchData: BarTouchData(enabled: true),
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          return Text('${value.toInt()}m', style: const TextStyle(fontSize: 10));
-                        },
-                      ),
-                    ),
-                  ),
-                  barGroups: growthData.map((data) {
-                    final month = data['month'] as int;
-                    final weight = (data['weight'] as num).toDouble();
-                    final height = (data['height'] as num).toDouble();
-
-                    return BarChartGroupData(
-                      x: month,
-                      barRods: [
-                        BarChartRodData(toY: weight, color: Colors.blue, width: 7),
-                        BarChartRodData(toY: height / 10, color: Colors.green, width: 7),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Stats
-            Text("Latest Weight: ${latest['weight']} kg", style: const TextStyle(fontSize: 16)),
-            Text("Latest Height: ${latest['height']} cm", style: const TextStyle(fontSize: 16)),
-            Text("BMI: ${bmi.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text("👶 Baby: $name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("📅 Age: $age months"),
+            Text("⚖️ Weight: $weight kg"),
+            Text("📏 Height: $height cm"),
             const SizedBox(height: 10),
-            Text(advice, style: TextStyle(fontSize: 14, color: bmi < 14 ? Colors.red : Colors.green)),
+            Text("📊 BMI: ${bmi.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text("🩺 Advice:", style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(advice, style: const TextStyle(fontSize: 16, color: Colors.blueGrey)),
+            const SizedBox(height: 30),
+
+            const Text("📈 Weight Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg")),
+
+            const SizedBox(height: 30),
+            const Text("📏 Height Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm")),
+
+            const SizedBox(height: 30),
+            const Text("🔄 Weight vs Height (Combined)", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 250, child: ScatterChartWidget(spots: getCombinedGrowthSpots())),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class LineChartWidget extends StatelessWidget {
+  final List<FlSpot> spots;
+  final String yLabel;
+
+  const LineChartWidget({Key? key, required this.spots, required this.yLabel}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return LineChart(
+      LineChartData(
+        minX: 1,
+        maxX: 12,
+        minY: 0,
+        lineBarsData: [
+          LineChartBarData(
+            isCurved: true,
+            color: Colors.pinkAccent,
+            barWidth: 3,
+            belowBarData: BarAreaData(show: true, color: Colors.pinkAccent.withOpacity(0.2)),
+            spots: spots,
+          )
+        ],
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (value, meta) {
+              return Text("${value.toStringAsFixed(0)} $yLabel", style: const TextStyle(fontSize: 12));
+            }),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 32,
+              getTitlesWidget: (value, meta) => Text("${value.toInt()} mo"),
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        gridData: FlGridData(show: true),
+      ),
+    );
+  }
+}
+
+class ScatterChartWidget extends StatelessWidget {
+  final List<FlSpot> spots;
+
+  const ScatterChartWidget({super.key, required this.spots});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScatterChart(
+      ScatterChartData(
+       scatterSpots: spots.map((spot) => ScatterSpot(
+  spot.x,
+  spot.y,
+  dotPainter: FlDotCirclePainter(
+    radius: 6,
+    color: Colors.teal,
+    strokeWidth: 1,
+    strokeColor: Colors.white,
+  ),
+)).toList(),
+
+        gridData: FlGridData(show: true),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) => Text("${value.toInt()} cm"),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) => Text("${value.toInt()} kg"),
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        minX: spots.first.x - 2,
+        maxX: spots.last.x + 2,
+        minY: spots.first.y - 10,
+        maxY: spots.last.y + 10,
       ),
     );
   }

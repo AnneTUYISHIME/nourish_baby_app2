@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as path;
 
-
 class DBHelper {
   static Database? _db;
 
@@ -9,7 +8,7 @@ class DBHelper {
   static Future<void> init() async {
     if (_db != null) return;
     String dbPath = path.join(await getDatabasesPath(), 'baby_nourish.db');
-    _db = await openDatabase(dbPath, version: 1, onCreate: (db, version) async {
+    _db = await openDatabase(dbPath, version: 2, onCreate: (db, version) async {
       await db.execute(''' 
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +26,18 @@ class DBHelper {
         lastFeeding TEXT,
         weight REAL,
         height REAL
+      )
+      ''');
+
+      // Create the growth_data table to store weight and height history
+      await db.execute(''' 
+      CREATE TABLE growth_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        baby_id INTEGER,
+        month INTEGER,
+        weight REAL,
+        height REAL,
+        FOREIGN KEY(baby_id) REFERENCES baby_profile(id)
       )
       ''');
     });
@@ -54,14 +65,13 @@ class DBHelper {
   }
 
   // Baby Profile CRUD
-  static Future<void> insertBabyProfile(String name, int age,  double weight, double height) async {
+  static Future<void> insertBabyProfile(String name, int age, double weight, double height) async {
     await init();
     await _db!.insert(
       'baby_profile',
       {
         'name': name,
         'age': age,
-        
         'weight': weight,
         'height': height,
       },
@@ -74,14 +84,13 @@ class DBHelper {
     return await _db!.query('baby_profile');
   }
 
-  static Future<void> updateBabyProfile(int id, String name, int age,  double weight, double height) async {
+  static Future<void> updateBabyProfile(int id, String name, int age, double weight, double height) async {
     await init();
     await _db!.update(
       'baby_profile',
       {
         'name': name,
         'age': age,
-        
         'weight': weight,
         'height': height,
       },
@@ -110,5 +119,41 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  
+  // ✅ New method to get the latest baby profile (or first if only one)
+  static Future<Map<String, dynamic>?> getBabyProfile() async {
+    await init();
+    final List<Map<String, dynamic>> result = await _db!.query(
+      'baby_profile',
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  // ✅ New method to get growth data for a specific baby
+  static Future<List<Map<String, dynamic>>> getGrowthData(String babyId) async {
+    await init();
+    final List<Map<String, dynamic>> result = await _db!.query(
+      'growth_data',
+      where: 'baby_id = ?',
+      whereArgs: [babyId],
+      orderBy: 'month ASC',  // Or another ordering depending on how you store the growth data
+    );
+    return result;
+  }
+
+  // Insert growth data (e.g., weight and height over time)
+  static Future<void> insertGrowthData(int babyId, int month, double weight, double height) async {
+    await init();
+    await _db!.insert(
+      'growth_data',
+      {
+        'baby_id': babyId,
+        'month': month,
+        'weight': weight,
+        'height': height,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
 }

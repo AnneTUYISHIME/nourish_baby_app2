@@ -1,37 +1,31 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/db_helper.dart';
 import 'user_model.dart';
-import 'screens/baby_profile.dart';
-import 'screens/db_helper.dart'; // Make sure you import DBHelper
-import 'screens/meal_plan.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_notification.dart';
+import 'screens/meal_plan.dart';
+import 'screens/growth_status.dart';
 import 'package:timezone/data/latest.dart' as tzData;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:nourish_baby_app/screens/notification_service.dart';
-import 'screens/growth_status.dart'; // ✅ Added new screen import
-
-import 'dart:io';
+import 'screens/growth_status.dart';
 
 final notificationService = FirebaseNotificationService();
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print('🔔 BG Message: ${message.messageId}');
-}
+//Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+ // await Firebase.initializeApp();
+ // print('🔔 BG Message: ${message.messageId}');
+//}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tzData.initializeTimeZones();
   await NotificationService.init();
-
   await Firebase.initializeApp();
   notificationService.initialize();
-
   runApp(MyApp());
 }
 
@@ -40,7 +34,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => UserModel()),
+        ChangeNotifierProvider(create: (_) => UserModel()),
       ],
       child: MaterialApp(
         title: 'Baby Care App',
@@ -56,29 +50,37 @@ class MyApp extends StatelessWidget {
           '/login': (context) => LoginScreen(),
           '/register': (context) => RegisterScreen(),
           '/home': (context) => HomeScreen(),
-          '/meal-plan': (context) => MealPlanScreen(
-            babyName: 'Default Baby',
-            babyAgeMonths: 6,
-          ),
-          // You can add a named route too if needed
-          // '/growth-stats': (context) => GrowthStatsScreen(),
         },
       ),
     );
   }
 }
 
-// 🧠 The HomeScreen, where notifications can be sent and history viewed
+// ✅ HomeScreen now fetches baby data dynamically
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Map<String, dynamic>? baby;
   List<String> _notificationHistory = [];
 
+  @override
+  void initState() {
+    super.initState();
+    fetchBaby();
+  }
+
+  Future<void> fetchBaby() async {
+    final result = await DBHelper.getBabyProfile();
+    setState(() {
+      baby = result;
+    });
+  }
+
   void _sendNotification() {
-    String message = "Hey, it's time for Willo to take Panadol";
+    String message = "Hey, it's time to care for ${baby?['name'] ?? 'the baby'}";
 
     setState(() {
       _notificationHistory.add(message);
@@ -93,32 +95,90 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => NotificationHistoryScreen(
-          history: _notificationHistory,
-        ),
+        builder: (_) => NotificationHistoryScreen(history: _notificationHistory),
       ),
     );
   }
 
   void _viewGrowthStats() {
-    Navigator.push(
+  final currentBaby = baby; // Get once and use
+
+  if (currentBaby == null) return;
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => GrowthStatusScreen(
+        babyId: currentBaby['id'],
+        name: currentBaby['name'],
+        age: currentBaby['age'],
+        weight: currentBaby['weight'],
+        height: currentBaby['height'],
+      ),
+    ),
+  );
+}
+
+
+ /* void _viewGrowthStats() {
+
+
+    if (baby == null) return;
+
+    
+
+     Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => GrowthStatusScreen(
+      babyId: baby!['id'],
+      name: baby['name'],
+      age: baby['age'],
+      weight: baby['weight'],
+      height: baby['height'],
+    ),
+  ),
+);
+  }*/
+
+    /*Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => GrowthStatusScreen(
-          babyName: 'Baby Name',  
-      babyAgeMonths: 6,       
-      babyWeight: 6.2,        
-      babyHeight: 63.0,       
-    ),
+          babyName: baby!['name'],
+         babyAgeMonths: baby!['age'],
+          babyWeight: baby!['weight'],
+             babyHeight: baby!['height'],
         ),
-      
+      ),
+    );*/
+  
+
+  void _viewMealPlan() {
+    if (baby == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MealPlanScreen(
+          babyName: baby!['name'],
+          babyAgeMonths: baby!['age'],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (baby == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Loading Baby Profile...")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text('Willo\'s Care Reminder')),
+      appBar: AppBar(title: Text("${baby!['name']}'s Care Reminder")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -137,6 +197,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _viewGrowthStats,
               child: Text("View Baby Growth Stats 📈"),
             ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _viewMealPlan,
+              child: Text("View Meal Plan 🍽️"),
+            ),
           ],
         ),
       ),
@@ -144,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// 📜 This is the Notification History screen that shows the list of notifications
+// 📜 Notification History screen
 class NotificationHistoryScreen extends StatelessWidget {
   final List<String> history;
 
