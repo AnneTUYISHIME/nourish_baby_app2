@@ -90,11 +90,11 @@ class GrowthStatusScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             const Text("📈 Weight Progress", style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg")),
+            SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg", age: age)),
 
             const SizedBox(height: 30),
             const Text("📏 Height Progress", style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm")),
+            SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm", age: age)),
 
             const SizedBox(height: 30),
             const Text("🔄 Weight vs Height (Combined)", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -109,15 +109,21 @@ class GrowthStatusScreen extends StatelessWidget {
 class LineChartWidget extends StatelessWidget {
   final List<FlSpot> spots;
   final String yLabel;
+  final int age;
 
-  const LineChartWidget({Key? key, required this.spots, required this.yLabel}) : super(key: key);
+  const LineChartWidget({
+    Key? key,
+    required this.spots,
+    required this.yLabel,
+    required this.age,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return LineChart(
       LineChartData(
         minX: 1,
-        maxX: 12,
+        maxX: age < 12 ? age.toDouble() : 12,
         minY: 0,
         lineBarsData: [
           LineChartBarData(
@@ -130,15 +136,29 @@ class LineChartWidget extends StatelessWidget {
         ],
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (value, meta) {
-              return Text("${value.toStringAsFixed(0)} $yLabel", style: const TextStyle(fontSize: 12));
-            }),
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text("${value.toStringAsFixed(0)} $yLabel", style: const TextStyle(fontSize: 12));
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 32,
-              getTitlesWidget: (value, meta) => Text("${value.toInt()} mo"),
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final valid = value.toInt();
+                if (valid >= 1 && valid <= 12) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text("$valid mo", style: const TextStyle(fontSize: 12)),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ),
         ),
@@ -158,17 +178,16 @@ class ScatterChartWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScatterChart(
       ScatterChartData(
-       scatterSpots: spots.map((spot) => ScatterSpot(
-  spot.x,
-  spot.y,
-  dotPainter: FlDotCirclePainter(
-    radius: 6,
-    color: Colors.teal,
-    strokeWidth: 1,
-    strokeColor: Colors.white,
-  ),
-)).toList(),
-
+        scatterSpots: spots.map((spot) => ScatterSpot(
+          spot.x,
+          spot.y,
+          dotPainter: FlDotCirclePainter(
+            radius: 6,
+            color: Colors.teal,
+            strokeWidth: 1,
+            strokeColor: Colors.white,
+          ),
+        )).toList(),
         gridData: FlGridData(show: true),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(

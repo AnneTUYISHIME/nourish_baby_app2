@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import './db_helper.dart';
+import './login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -99,21 +100,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           return;
                         }
 
+                        // Insert the user with the role set to 'user'
                         await DBHelper.insertUser(
-                          _usernameController.text.trim(),
-                          _emailController.text.trim(),
-                         _passwordController.text.trim(),
-                         );
+                          username: _usernameController.text.trim(),
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text.trim(),
+                          role: 'user', // Setting the role as 'user'
+                        );
 
-
-                       /* await DBHelper.insertUser(
-                          _emailController.text.trim(),
-                           password,
-                        );*/
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text("Registration successful! Please login.")),
                         );
-                        Navigator.pop(context);
+
+                        // ✅ Navigate to LoginScreen after a brief delay
+                        Future.delayed(Duration(seconds: 1), () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => LoginScreen()),
+                          );
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,

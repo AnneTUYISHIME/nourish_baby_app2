@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'db_helper.dart'; // Assume you created this helper to manage SQLite
 import 'register_screen.dart';
+import '../Admin_screen/registration_screen.dart';
+import '../Admin_screen/admin_home.dart';
+import 'chooseScreen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,16 +16,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>(); // GlobalKey for form validation
+  final _formKey = GlobalKey<FormState>();
 
   final RegExp _emailRegex =
       RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
   bool _isPasswordValid(String password) {
     return password.length >= 6 &&
-           password.contains(RegExp(r'[A-Z]')) &&
-           password.contains(RegExp(r'[a-z]')) &&
-           password.contains(RegExp(r'[0-9]'));
+        password.contains(RegExp(r'[A-Z]')) &&
+        password.contains(RegExp(r'[a-z]')) &&
+        password.contains(RegExp(r'[0-9]'));
   }
 
   void _login() async {
@@ -30,28 +33,32 @@ class _LoginScreenState extends State<LoginScreen> {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // Check if form is valid
     if (!_formKey.currentState!.validate()) {
-      return; // If form is invalid, stop execution
-    }
-
-    // Check email format
-    if (!_emailRegex.hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid email format")));
       return;
     }
 
-    // Check credentials (simulate DB check for now)
+    if (!_emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Invalid email format")));
+      return;
+    }
+
     bool isValid = await DBHelper.checkCredentials(email, password, username);
 
     if (isValid) {
-      // Navigate to HomeScreen if credentials are valid
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
+      // Check if the user is an admin (simple check, you can improve this)
+      if (username.toLowerCase() == "admin" || email.toLowerCase().contains("admin")) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      }
     } else {
-      // Show error message if credentials are invalid
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Invalid credentials. Please try again.")),
       );
@@ -85,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
           child: Form(
-            key: _formKey, // Assigning the form key to the Form widget -> testing
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -94,7 +101,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: Column(
                     children: [
-                      Text("Login", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                      Text(
+                        "Login",
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueAccent),
+                      ),
                       SizedBox(height: 20),
                       TextFormField(
                         controller: _usernameController,
@@ -133,7 +146,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: "Password",
                           border: OutlineInputBorder(),
                           suffixIcon: IconButton(
-                            icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                            icon: Icon(_isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off),
                             onPressed: () {
                               setState(() {
                                 _isPasswordVisible = !_isPasswordVisible;
@@ -155,20 +170,49 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
-                          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
                         ),
-                        child: Text("Login", style: TextStyle(color: Colors.white)),
+                        child: Text("Login",
+                            style: TextStyle(color: Colors.white)),
                       ),
                       SizedBox(height: 20),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => RegisterScreen()),
+                            MaterialPageRoute(
+                                builder: (context) => ChooseRegisterScreen()),
                           );
                         },
-                        child: Text("Don't have an account? Register here", style: TextStyle(color: Colors.blueAccent)),
+                        child:
+                            Text("Don't have an account? Register here"),
                       ),
+                      SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => RegisterScreen()),
+                          );
+                        },
+                        child: Text("User Registration",
+                            style: TextStyle(color: Colors.blueAccent)),
+                      ),
+                      SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    AdminDashboardScreen()),
+                          );
+                        },
+                        child: Text("Admin Registration",
+                            style: TextStyle(color: Colors.blueAccent)),
+                      )
                     ],
                   ),
                 ),

@@ -6,14 +6,14 @@ import 'screens/register_screen.dart';
 import 'screens/db_helper.dart';
 import 'user_model.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_notification.dart';
+//import 'firebase_notification.dart';
 import 'screens/meal_plan.dart';
 import 'screens/growth_status.dart';
-import 'package:timezone/data/latest.dart' as tzData;
-import 'package:nourish_baby_app/screens/notification_service.dart';
+//import 'package:timezone/data/latest.dart' as tzData;
+//import 'package:nourish_baby_app/screens/notification_service.dart';
 import 'screens/growth_status.dart';
 
-final notificationService = FirebaseNotificationService();
+
 
 //Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
  // await Firebase.initializeApp();
@@ -22,10 +22,12 @@ final notificationService = FirebaseNotificationService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  tzData.initializeTimeZones();
-  await NotificationService.init();
-  await Firebase.initializeApp();
-  notificationService.initialize();
+  //tzData.initializeTimeZones();
+  //await NotificationService.init();
+  //await Firebase.initializeApp();
+  //notificationService.initialize();
+  await DBHelper. deleteDatabaseFile();
+  await DBHelper.init(); // 👈 Then recreate the DB
   runApp(MyApp());
 }
 
@@ -66,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? baby;
   List<String> _notificationHistory = [];
 
-  @override
+ /* @override
   void initState() {
     super.initState();
     fetchBaby();
@@ -77,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       baby = result;
     });
-  }
+  }*/
 
   void _sendNotification() {
     String message = "Hey, it's time to care for ${baby?['name'] ?? 'the baby'}";

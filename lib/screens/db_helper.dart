@@ -8,17 +8,18 @@ class DBHelper {
   static Future<void> init() async {
     if (_db != null) return;
     String dbPath = path.join(await getDatabasesPath(), 'baby_nourish.db');
-    _db = await openDatabase(dbPath, version: 2, onCreate: (db, version) async {
-      await db.execute(''' 
+    _db = await openDatabase(dbPath, version: 1, onCreate: (db, version) async {
+      await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT,
         email TEXT UNIQUE,
-        password TEXT
+        password TEXT,
+        user_type TEXT
       )
       ''');
 
-      await db.execute(''' 
+      await db.execute('''
       CREATE TABLE baby_profile (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
@@ -26,18 +27,6 @@ class DBHelper {
         lastFeeding TEXT,
         weight REAL,
         height REAL
-      )
-      ''');
-
-      // Create the growth_data table to store weight and height history
-      await db.execute(''' 
-      CREATE TABLE growth_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        baby_id INTEGER,
-        month INTEGER,
-        weight REAL,
-        height REAL,
-        FOREIGN KEY(baby_id) REFERENCES baby_profile(id)
       )
       ''');
     });
@@ -54,12 +43,42 @@ class DBHelper {
     return maps.isNotEmpty;
   }
 
-  // Insert a new user
-  static Future<void> insertUser(String username, String email, String password) async {
+  // Insert a normal user (user_type = "user")
+  static Future<void> insertUser({
+    required String username,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
     await init();
     await _db!.insert(
       'users',
-      {'username': username, 'email': email, 'password': password},
+      {
+        'username': username,
+        'email': email,
+        'password': password,
+        'user_type': 'user', // Role set to 'user'
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Insert an admin (user_type = "admin")
+  static Future<void> insertAdmin({
+    required String username,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    await init();
+    await _db!.insert(
+      'users',
+      {
+        'username': username,
+        'email': email,
+        'password': password,
+        'user_type': 'admin', // Role set to 'admin'
+      },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -108,7 +127,6 @@ class DBHelper {
     );
   }
 
-  // New method to get a single baby profile by ID
   static Future<Map<String, dynamic>?> getBabyProfileById(int id) async {
     await init();
     final List<Map<String, dynamic>> result = await _db!.query(
@@ -119,41 +137,11 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  // ✅ New method to get the latest baby profile (or first if only one)
-  static Future<Map<String, dynamic>?> getBabyProfile() async {
-    await init();
-    final List<Map<String, dynamic>> result = await _db!.query(
-      'baby_profile',
-      orderBy: 'id DESC',
-      limit: 1,
-    );
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  // ✅ New method to get growth data for a specific baby
-  static Future<List<Map<String, dynamic>>> getGrowthData(String babyId) async {
-    await init();
-    final List<Map<String, dynamic>> result = await _db!.query(
-      'growth_data',
-      where: 'baby_id = ?',
-      whereArgs: [babyId],
-      orderBy: 'month ASC',  // Or another ordering depending on how you store the growth data
-    );
-    return result;
-  }
-
-  // Insert growth data (e.g., weight and height over time)
-  static Future<void> insertGrowthData(int babyId, int month, double weight, double height) async {
-    await init();
-    await _db!.insert(
-      'growth_data',
-      {
-        'baby_id': babyId,
-        'month': month,
-        'weight': weight,
-        'height': height,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  // 👇 This method deletes the whole database file (for dev use only)
+  static Future<void> deleteDatabaseFile() async {
+    final dbPath = await getDatabasesPath();
+    final fullPath = path.join(dbPath, 'baby_nourish.db'); // match the name used above
+    await deleteDatabase(fullPath);
+    print("🔄 Database deleted successfully.");
   }
 }
