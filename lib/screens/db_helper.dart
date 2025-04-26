@@ -33,7 +33,18 @@ class DBHelper {
   }
 
   // Check if credentials match (email, username, and password)
-  static Future<bool> checkCredentials(String email, String password, String username) async {
+  // Returns user map if credentials match, otherwise null
+static Future<Map<String, dynamic>?> checkCredentials(String email, String password, String username) async {
+  await init();
+  final List<Map<String, dynamic>> maps = await _db!.query(
+    'users',
+    where: 'email = ? AND password = ? AND username = ?',
+    whereArgs: [email, password, username],
+  );
+  return maps.isNotEmpty ? maps.first : null;
+}
+
+ /* static Future<bool> checkCredentials(String email, String password, String username) async {
     await init();
     final List<Map<String, dynamic>> maps = await _db!.query(
       'users',
@@ -41,7 +52,7 @@ class DBHelper {
       whereArgs: [email, password, username],
     );
     return maps.isNotEmpty;
-  }
+  }*/
 
   // Insert a normal user (user_type = "user")
   static Future<void> insertUser({

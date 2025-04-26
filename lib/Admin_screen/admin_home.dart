@@ -5,15 +5,34 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool canGoBack = Navigator.canPop(context);
+
     return Scaffold(
       backgroundColor: Colors.pink[50],
       appBar: AppBar(
-        backgroundColor: Colors.blueAccent,
-        title: const Text("Admin Dashboard"),
+        backgroundColor: Colors.lightBlue, // Light blue background
+        title: const Text(
+          "Admin Dashboard",
+          style: TextStyle(color: Colors.white), // White title text
+        ),
+        iconTheme: const IconThemeData(color: Colors.white), // White icons
+        leading: canGoBack
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              )
+            : Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications),
-            onPressed: () {},
+            onPressed: () {
+              // Handle notifications
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -28,7 +47,7 @@ class AdminDashboardScreen extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
+              decoration: BoxDecoration(color: Colors.lightBlue),
               child: Text(
                 "Admin Menu",
                 style: TextStyle(color: Colors.white, fontSize: 24),
@@ -74,18 +93,22 @@ class AdminDashboardScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent),
-                textAlign: TextAlign.center),
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 10),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
+            Text(
+              value,
+              style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+            ),
           ],
         ),
       ),
@@ -98,7 +121,7 @@ class AdminDashboardScreen extends StatelessWidget {
       title: Text(title),
       onTap: () {
         Navigator.pop(context);
-        // Navigate to respective screen
+        // Implement navigation logic if needed
       },
     );
   }

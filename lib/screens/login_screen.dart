@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'db_helper.dart'; // Assume you created this helper to manage SQLite
-import 'register_screen.dart';
-import '../Admin_screen/registration_screen.dart';
-import '../Admin_screen/admin_home.dart';
+import 'db_helper.dart';
 import 'chooseScreen.dart';
+import '../Admin_screen/admin_home.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -43,11 +41,12 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    bool isValid = await DBHelper.checkCredentials(email, password, username);
+    final user = await DBHelper.checkCredentials(email, password, username);
 
-    if (isValid) {
-      // Check if the user is an admin (simple check, you can improve this)
-      if (username.toLowerCase() == "admin" || email.toLowerCase().contains("admin")) {
+    if (user != null) {
+      String userType = user['user_type'] ?? 'user'; // Default to 'user' if not specified
+
+      if (userType == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
@@ -104,9 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         "Login",
                         style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blueAccent),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                        ),
                       ),
                       SizedBox(height: 20),
                       TextFormField(
@@ -146,9 +146,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: "Password",
                           border: OutlineInputBorder(),
                           suffixIcon: IconButton(
-                            icon: Icon(_isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off),
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
                             onPressed: () {
                               setState(() {
                                 _isPasswordVisible = !_isPasswordVisible;
@@ -173,8 +175,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: EdgeInsets.symmetric(
                               horizontal: 40, vertical: 15),
                         ),
-                        child: Text("Login",
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          "Login",
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                       SizedBox(height: 20),
                       TextButton(
@@ -185,34 +189,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 builder: (context) => ChooseRegisterScreen()),
                           );
                         },
-                        child:
-                            Text("Don't have an account? Register here"),
+                        child: Text("Don't have an account? Register here"),
                       ),
-                      SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => RegisterScreen()),
-                          );
-                        },
-                        child: Text("User Registration",
-                            style: TextStyle(color: Colors.blueAccent)),
-                      ),
-                      SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    AdminDashboardScreen()),
-                          );
-                        },
-                        child: Text("Admin Registration",
-                            style: TextStyle(color: Colors.blueAccent)),
-                      )
                     ],
                   ),
                 ),
