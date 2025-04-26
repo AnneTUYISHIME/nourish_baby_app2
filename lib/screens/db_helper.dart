@@ -8,51 +8,44 @@ class DBHelper {
   static Future<void> init() async {
     if (_db != null) return;
     String dbPath = path.join(await getDatabasesPath(), 'baby_nourish.db');
-    _db = await openDatabase(dbPath, version: 1, onCreate: (db, version) async {
-      await db.execute('''
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        email TEXT UNIQUE,
-        password TEXT,
-        user_type TEXT
-      )
-      ''');
+    _db = await openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            email TEXT UNIQUE,
+            password TEXT,
+            user_type TEXT
+          )
+        ''');
 
-      await db.execute('''
-      CREATE TABLE baby_profile (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        age INTEGER,
-        lastFeeding TEXT,
-        weight REAL,
-        height REAL
-      )
-      ''');
-    });
+        await db.execute('''
+          CREATE TABLE baby_profile (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            age INTEGER,
+            lastFeeding TEXT,
+            weight REAL,
+            height REAL
+          )
+        ''');
+      },
+    );
   }
 
   // Check if credentials match (email, username, and password)
-  // Returns user map if credentials match, otherwise null
-static Future<Map<String, dynamic>?> checkCredentials(String email, String password, String username) async {
-  await init();
-  final List<Map<String, dynamic>> maps = await _db!.query(
-    'users',
-    where: 'email = ? AND password = ? AND username = ?',
-    whereArgs: [email, password, username],
-  );
-  return maps.isNotEmpty ? maps.first : null;
-}
-
- /* static Future<bool> checkCredentials(String email, String password, String username) async {
+  static Future<Map<String, dynamic>?> checkCredentials(String email, String password, String username) async {
     await init();
     final List<Map<String, dynamic>> maps = await _db!.query(
       'users',
       where: 'email = ? AND password = ? AND username = ?',
       whereArgs: [email, password, username],
     );
-    return maps.isNotEmpty;
-  }*/
+    return maps.isNotEmpty ? maps.first : null;
+  }
 
   // Insert a normal user (user_type = "user")
   static Future<void> insertUser({
@@ -68,7 +61,7 @@ static Future<Map<String, dynamic>?> checkCredentials(String email, String passw
         'username': username,
         'email': email,
         'password': password,
-        'user_type': 'user', // Role set to 'user'
+        'user_type': role, // Notice: now using passed 'role'
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -88,7 +81,7 @@ static Future<Map<String, dynamic>?> checkCredentials(String email, String passw
         'username': username,
         'email': email,
         'password': password,
-        'user_type': 'admin', // Role set to 'admin'
+        'user_type': role, // Notice: now using passed 'role'
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -148,11 +141,40 @@ static Future<Map<String, dynamic>?> checkCredentials(String email, String passw
     return result.isNotEmpty ? result.first : null;
   }
 
-  // 👇 This method deletes the whole database file (for dev use only)
-  static Future<void> deleteDatabaseFile() async {
-    final dbPath = await getDatabasesPath();
-    final fullPath = path.join(dbPath, 'baby_nourish.db'); // match the name used above
-    await deleteDatabase(fullPath);
-    print("🔄 Database deleted successfully.");
+  // ----------------------------------------------------------------
+  // 🔥 New methods for Managing Parents (user_type = 'user')
+
+  // Fetch all parents (only users with user_type = 'user')
+  static Future<List<Map<String, dynamic>>> getParents() async {
+    await init();
+    return await _db!.query(
+      'users',
+      where: 'user_type = ?',
+      whereArgs: ['user'],
+    );
+  }
+
+  // Update parent username and email by id
+  static Future<void> updateParent(int id, String username, String email) async {
+    await init();
+    await _db!.update(
+      'users',
+      {
+        'username': username,
+        'email': email,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Delete parent by id
+  static Future<void> deleteParent(int id) async {
+    await init();
+    await _db!.delete(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

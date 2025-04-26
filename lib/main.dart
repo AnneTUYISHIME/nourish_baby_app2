@@ -26,8 +26,8 @@ void main() async {
   //await NotificationService.init();
   //await Firebase.initializeApp();
   //notificationService.initialize();
-  await DBHelper. deleteDatabaseFile();
-  await DBHelper.init(); // 👈 Then recreate the DB
+ // await DBHelper. deleteDatabaseFile();
+ // await DBHelper.init(); // 👈 Then recreate the DB
   runApp(MyApp());
 }
 
