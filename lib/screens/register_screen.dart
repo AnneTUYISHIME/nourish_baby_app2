@@ -105,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           username: _usernameController.text.trim(),
                           email: _emailController.text.trim(),
                           password: _passwordController.text.trim(),
-                          role: 'user', // Setting the role as 'user'
+                          parent: 'parent', // Setting the role as 'user'
                         );
 
                         ScaffoldMessenger.of(context).showSnackBar(

@@ -26,7 +26,7 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
             username: _usernameController.text,
             email: _emailController.text,
             password: _passwordController.text,
-            role: 'admin', // Save the role as 'admin'
+            admin: 'admin', // Save the role as 'admin'
           );
 
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nourish_baby_app/screens/db_helper.dart';
-
+import 'package:nourish_baby_app/screens/db_helper.dart'; // Make sure DBHelper has required methods
 
 class ManageParentsScreen extends StatefulWidget {
   const ManageParentsScreen({Key? key}) : super(key: key);
@@ -12,7 +11,7 @@ class ManageParentsScreen extends StatefulWidget {
 class _ManageParentsScreenState extends State<ManageParentsScreen> {
   List<Map<String, dynamic>> _parents = [];
   List<Map<String, dynamic>> _filteredParents = [];
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -27,15 +26,16 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
     super.dispose();
   }
 
+  // Load parents data from the database
   Future<void> _loadParents() async {
     final parents = await DBHelper.getParents();
-    parents.sort((a, b) => a['username'].toString().toLowerCase().compareTo(b['username'].toString().toLowerCase())); // Sort alphabetically
     setState(() {
       _parents = parents;
       _filteredParents = parents;
     });
   }
 
+  // Filter parents based on search input
   void _filterParents() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -47,9 +47,149 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
     });
   }
 
+  // Delete parent
   Future<void> _deleteParent(int id) async {
     await DBHelper.deleteParent(id);
     _loadParents();
+  }
+
+  // Show dialog to edit parent
+  void _showEditDialog(Map<String, dynamic> parent) {
+    final usernameController = TextEditingController(text: parent['username']);
+    final emailController = TextEditingController(text: parent['email']);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Parent'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(labelText: 'Username'),
+            ),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              usernameController.dispose();
+              emailController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pinkAccent.shade100,
+            ),
+            onPressed: () async {
+              await DBHelper.updateParent(
+                parent['id'],
+                usernameController.text,
+                emailController.text,
+              );
+              usernameController.dispose();
+              emailController.dispose();
+              Navigator.pop(context);
+              _loadParents();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog to add new parent
+  void _showAddParentDialog() {
+    final usernameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Parent'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              usernameController.dispose();
+              emailController.dispose();
+              passwordController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pinkAccent.shade100,
+            ),
+            onPressed: () async {
+              if (usernameController.text.isNotEmpty &&
+                  emailController.text.isNotEmpty &&
+                  passwordController.text.isNotEmpty) {
+                await DBHelper.insertUser(
+                  username: usernameController.text,
+                  email: emailController.text,
+                  password: passwordController.text,
+                  parent: 'parent', // or 'parent'
+                );
+                Navigator.pop(context);
+                _loadParents();
+              }
+              usernameController.dispose();
+              emailController.dispose();
+              passwordController.dispose();
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Update last active time when a parent is interacted with
+  void _updateLastActive(int id) async {
+    await DBHelper.updateLastActive(id);
+    _loadParents(); // Reload the list to reflect the updated last active time
+  }
+
+  // Fetch the baby name associated with the parent
+  Future<String> _getBabyNameForParent(int parentId) async {
+    final babyProfiles = await DBHelper.getBabyProfiles();
+    final parentProfile = _parents.firstWhere(
+      (parent) => parent['id'] == parentId,
+      orElse: () => {},
+    );
+    return babyProfiles.isNotEmpty
+        ? babyProfiles.first['name'] ?? 'Unknown Baby'
+        : 'No Baby Profile';
   }
 
   @override
@@ -85,7 +225,10 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Total Parents: ${_filteredParents.length}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -96,33 +239,63 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
                     itemCount: _filteredParents.length,
                     itemBuilder: (context, index) {
                       final parent = _filteredParents[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.lightBlue.shade100,
-                            child: const Icon(Icons.family_restroom, color: Colors.white),
-                          ),
-                          title: Text(parent['username']),
-                          subtitle: Text(parent['email']),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) {
-                              if (value == 'edit') {
-                                _showEditDialog(parent);
-                              } else if (value == 'delete') {
-                                _deleteParent(parent['id']);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                            ],
-                          ),
-                        ),
+                      return FutureBuilder<String>(
+                        future: _getBabyNameForParent(parent['id']),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final babyName = snapshot.data ?? 'No Baby';
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.lightBlue.shade100,
+                                child: const Icon(Icons.family_restroom, color: Colors.white),
+                              ),
+                              title: Text(parent['username']),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(parent['email']),
+                                  Text(
+                                    'Baby: $babyName',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                  Text(
+                                    'Last Active: ${parent['last_active'] ?? 'Not available'}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _showEditDialog(parent);
+                                  } else if (value == 'delete') {
+                                    _deleteParent(parent['id']);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _updateLastActive(parent['id']), // Update last active on tap
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -130,90 +303,9 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showAddParentDialog();
-        },
+        onPressed: _showAddParentDialog,
         backgroundColor: Colors.pinkAccent.shade100,
         child: const Icon(Icons.person_add),
-      ),
-    );
-  }
-
-  void _showEditDialog(Map<String, dynamic> parent) {
-    final usernameController = TextEditingController(text: parent['username']);
-    final emailController = TextEditingController(text: parent['email']);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Parent'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Username')),
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await DBHelper.updateParent(
-                parent['id'],
-                usernameController.text,
-                emailController.text,
-              );
-              Navigator.pop(context);
-              _loadParents();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent.shade100),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddParentDialog() {
-    final usernameController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Parent'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Username')),
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password')),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await DBHelper.insertUser(
-                username: usernameController.text,
-                email: emailController.text,
-                password: passwordController.text,
-                role: 'user', // or 'parent' if you use that
-              );
-              Navigator.pop(context);
-              _loadParents();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent.shade100),
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }

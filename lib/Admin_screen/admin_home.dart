@@ -1,11 +1,31 @@
 import 'package:flutter/material.dart';
+import '/screens/login_screen.dart'; // Make sure this path is correct
+import 'manage_parent.dart'; // Import your ManageParentsScreen
+import 'package:nourish_baby_app/screens/db_helper.dart'; // Import your DBHelper
 
-// Import your LoginScreen here
-import '/screens/login_screen.dart'; // <-- make sure this path is correct
-import 'manage_parent.dart';
-
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  int totalParents = 0; // Default to 0
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTotalParents(); // Fetch total parents when screen loads
+  }
+
+  // Fetch total parents using DBHelper
+  void fetchTotalParents() async {
+    int parentsCount = await DBHelper.getTotalParents();
+    setState(() {
+      totalParents = parentsCount; // Set the real number of parents
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,15 +66,15 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
             _buildDrawerItem(context, Icons.dashboard, "Dashboard"),
             _buildDrawerItem(
-              context, 
-              Icons.people, 
-              "Manage Parents", 
+              context,
+              Icons.people,
+              "Manage Parents",
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ManageParentsScreen()),
                 );
-              }
+              },
             ),
             _buildDrawerItem(context, Icons.child_care, "Manage Babies"),
             _buildDrawerItem(context, Icons.restaurant, "Manage Meals"),
@@ -64,9 +84,9 @@ class AdminDashboardScreen extends StatelessWidget {
             _buildDrawerItem(context, Icons.settings, "Settings"),
             const Divider(),
             _buildDrawerItem(
-              context, 
-              Icons.logout, 
-              "Logout", 
+              context,
+              Icons.logout,
+              "Logout",
               isLogout: true,
               onTap: () {
                 showDialog(
@@ -77,16 +97,16 @@ class AdminDashboardScreen extends StatelessWidget {
                     actions: [
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
+                          Navigator.of(context).pop();
                         },
                         child: const Text('Cancel'),
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog first
+                          Navigator.of(context).pop();
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => LoginScreen()),
+                            MaterialPageRoute(builder: (context) =>  LoginScreen()),
                             (Route<dynamic> route) => false,
                           );
                         },
@@ -98,7 +118,7 @@ class AdminDashboardScreen extends StatelessWidget {
                     ],
                   ),
                 );
-              }
+              },
             ),
           ],
         ),
@@ -110,49 +130,61 @@ class AdminDashboardScreen extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           children: [
-            _buildSummaryCard("👨‍👩‍👧‍👦 Total Parents", "120"),
-            _buildSummaryCard("👶 Baby Profiles", "98"),
-            _buildSummaryCard("🥣 Meals This Week", "24"),
-            _buildSummaryCard("🩺 Health Checkups", "8 Upcoming"),
-            _buildSummaryCard("📬 Feedback Reports", "5 New"),
-            _buildSummaryCard("📊 Growth Stats Accessed", "42 Times"),
+            _buildSummaryCard(
+              title: "👨‍👩‍👧‍👦 Total Parents",
+              value: totalParents.toString(),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ManageParentsScreen()),
+                );
+              },
+            ),
+            _buildSummaryCard(title: "👶 Baby Profiles", value: "98"),
+            _buildSummaryCard(title: "🥣 Meals This Week", value: "24"),
+            _buildSummaryCard(title: "🩺 Health Checkups", value: "8 Upcoming"),
+            _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
+            _buildSummaryCard(title: "📊 Growth Stats Accessed", value: "42 Times"),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryCard(String title, String value) {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
+  Widget _buildSummaryCard({required String title, required String value, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -172,7 +204,7 @@ class AdminDashboardScreen extends StatelessWidget {
         ),
       ),
       onTap: onTap ?? () {
-        Navigator.pop(context); // Close the drawer first
+        Navigator.pop(context);
       },
     );
   }
