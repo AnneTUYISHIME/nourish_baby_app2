@@ -4,15 +4,15 @@ import 'package:path/path.dart' as path;
 class DBHelper {
   static Database? _db;
 
-  // Initialize the database
   static Future<void> init() async {
     if (_db != null) return;
 
     String dbPath = path.join(await getDatabasesPath(), 'baby_nourish.db');
     _db = await openDatabase(
       dbPath,
-      version: 2,  // Increment the version number
+      version: 3,
       onCreate: (db, version) async {
+        // Create tables for users and their baby profiles
         await db.execute(''' 
           CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +20,7 @@ class DBHelper {
             email TEXT UNIQUE,
             password TEXT,
             user_type TEXT,
-            last_active TEXT  -- Add the last_active column
+            last_active TEXT
           )
         ''');
 
@@ -31,23 +31,38 @@ class DBHelper {
             age INTEGER,
             lastFeeding TEXT,
             weight REAL,
-            height REAL
+            height REAL,
+            parent_id INTEGER
+          )
+        ''');
+
+        // Create table for admin profiles
+        await db.execute(''' 
+          CREATE TABLE admin_profiles_babies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            age INTEGER,
+            weight REAL,
+            height REAL,
+            admin_id INTEGER
           )
         ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute(''' 
-            ALTER TABLE users ADD COLUMN last_active TEXT;
+            ALTER TABLE users ADD COLUMN last_active TEXT; 
           ''');
         }
       },
     );
   }
 
-  // User Authentication
   static Future<Map<String, dynamic>?> checkCredentials(
-      String email, String password, String username) async {
+    String email,
+    String password,
+    String username,
+  ) async {
     await init();
     final List<Map<String, dynamic>> result = await _db!.query(
       'users',
@@ -57,23 +72,22 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-
-  // Insert an admin (shortcut method)
   static Future<void> insertAdmin({
     required String username,
     required String email,
     required String password,
     required String admin,
   }) async {
-    await insertAdmin(
-      username: username,
-      email: email,
-      password: password,
-      admin: admin,
-    );
+    await init();
+    await _db!.insert('users', {
+      'username': username,
+      'email': email,
+      'password': password,
+      'user_type': admin,
+      'last_active': DateTime.now().toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // Insert a user (can be 'user' or 'admin')
   static Future<void> insertUser({
     required String username,
     required String email,
@@ -81,34 +95,29 @@ class DBHelper {
     required String parent,
   }) async {
     await init();
-    await _db!.insert(
-      'users',
-      {
-        'username': username,
-        'email': email,
-        'password': password,
-        'user_type': parent,
-        'last_active': DateTime.now().toString(), // Set last active time when user is created
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _db!.insert('users', {
+      'username': username,
+      'email': email,
+      'password': password,
+      'user_type': parent,
+      'last_active': DateTime.now().toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // ---------------- Baby Profile CRUD ----------------
-
+  // User Baby Profile CRUD
   static Future<void> insertBabyProfile(
-      String name, int age, double weight, double height) async {
+    String name,
+    int age,
+    double weight,
+    double height,
+  ) async {
     await init();
-    await _db!.insert(
-      'baby_profile',
-      {
-        'name': name,
-        'age': age,
-        'weight': weight,
-        'height': height,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await _db!.insert('baby_profile', {
+      'name': name,
+      'age': age,
+      'weight': weight,
+      'height': height,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   static Future<List<Map<String, dynamic>>> getBabyProfiles() async {
@@ -117,16 +126,16 @@ class DBHelper {
   }
 
   static Future<void> updateBabyProfile(
-      int id, String name, int age, double weight, double height) async {
+    int id,
+    String name,
+    int age,
+    double weight,
+    double height,
+  ) async {
     await init();
     await _db!.update(
       'baby_profile',
-      {
-        'name': name,
-        'age': age,
-        'weight': weight,
-        'height': height,
-      },
+      {'name': name, 'age': age, 'weight': weight, 'height': height},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -134,24 +143,20 @@ class DBHelper {
 
   static Future<void> deleteBabyProfile(int id) async {
     await init();
-    await _db!.delete(
-      'baby_profile',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await _db!.delete('baby_profile', where: 'id = ?', whereArgs: [id]);
   }
 
-  static Future<Map<String, dynamic>?> getBabyProfileById(int id) async {
+  static Future<Map<String, dynamic>?> getBabyProfileByParentId(
+    int parentId,
+  ) async {
     await init();
     final result = await _db!.query(
       'baby_profile',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'parent_id = ?',
+      whereArgs: [parentId],
     );
     return result.isNotEmpty ? result.first : null;
   }
-
-  // ---------------- Parent (User) Management ----------------
 
   static Future<List<Map<String, dynamic>>> getParents() async {
     await init();
@@ -162,20 +167,20 @@ class DBHelper {
     );
   }
 
-  static Future<void> updateParent(int id, String username, String email) async {
+  static Future<void> updateParent(
+    int id,
+    String username,
+    String email,
+  ) async {
     await init();
     await _db!.update(
       'users',
-      {
-        'username': username,
-        'email': email,
-      },
+      {'username': username, 'email': email},
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  // Method to update the last active time of the parent
   static Future<void> updateLastActive(int parentId) async {
     await init();
     await _db!.update(
@@ -188,14 +193,9 @@ class DBHelper {
 
   static Future<void> deleteParent(int id) async {
     await init();
-    await _db!.delete(
-      'users',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await _db!.delete('users', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Add this method to get the total number of parents
   static Future<int> getTotalParents() async {
     await init();
     final result = await _db!.rawQuery(
@@ -203,5 +203,129 @@ class DBHelper {
       ['parent'],
     );
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // Admin Baby Profile CRUD
+  static Future<void> insertAdminBabyProfile(
+    String name,
+    int age,
+    double weight,
+    double height,
+    int adminId, // Linking the profile to an admin
+  ) async {
+    await init();
+    await _db!.insert('admin_profiles_babies', {
+      'name': name,
+      'age': age,
+      'weight': weight,
+      'height': height,
+      'admin_id': adminId,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  static Future<List<Map<String, dynamic>>> getAdminBabyProfiles() async {
+    await init();
+    return await _db!.query('admin_profiles_babies');
+  }
+
+  static Future<void> updateAdminBabyProfile(
+    int id,
+    String name,
+    int age,
+    double weight,
+    double height,
+  ) async {
+    await init();
+    await _db!.update(
+      'admin_profiles_babies',
+      {'name': name, 'age': age, 'weight': weight, 'height': height},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  static Future<void> deleteAdminBabyProfile(int id) async {
+    await init();
+    await _db!.delete('admin_profiles_babies', where: 'id = ?', whereArgs: [id]);
+  }
+
+  static Future<Map<String, dynamic>?> getAdminBabyProfileById(int id) async {
+    await init();
+    final result = await _db!.query(
+      'admin_profiles_babies',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+  
+  // 🚀🚀🚀 --- New Methods for Baby Profile Management --- 🚀🚀🚀
+
+  /// Search Baby Profiles by name
+  static Future<List<Map<String, dynamic>>> searchBabyProfiles(
+    String keyword,
+  ) async {
+    await init();
+    return await _db!.query(
+      'baby_profile',
+      where: 'name LIKE ?',
+      whereArgs: ['%$keyword%'],
+    );
+  }
+
+  /// Filter Baby Profiles by age range
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByAge(
+    int minAge,
+    int maxAge,
+  ) async {
+    await init();
+    return await _db!.query(
+      'baby_profile',
+      where: 'age BETWEEN ? AND ?',
+      whereArgs: [minAge, maxAge],
+    );
+  }
+
+  /// Filter Baby Profiles by weight range
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByWeight(
+    double minWeight,
+    double maxWeight,
+  ) async {
+    await init();
+    return await _db!.query(
+      'baby_profile',
+      where: 'weight BETWEEN ? AND ?',
+      whereArgs: [minWeight, maxWeight],
+    );
+  }
+
+  /// Filter Baby Profiles by height range
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByHeight(
+    double minHeight,
+    double maxHeight,
+  ) async {
+    await init();
+    return await _db!.query(
+      'baby_profile',
+      where: 'height BETWEEN ? AND ?',
+      whereArgs: [minHeight, maxHeight],
+    );
+  }
+
+  /// Export Baby Profiles Data (for CSV/Excel)
+  static Future<List<Map<String, dynamic>>> exportBabyProfilesData() async {
+    await init();
+    return await _db!.query('baby_profile');
+  }
+
+  /// Get detailed Baby Profile by ID
+  static Future<Map<String, dynamic>?> getBabyProfileById(int id) async {
+    await init();
+    final result = await _db!.query(
+      'baby_profile',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
   }
 }

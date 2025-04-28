@@ -38,6 +38,8 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     final age = int.tryParse(_ageController.text) ?? 0;
     final weight = double.tryParse(_weightController.text) ?? 0.0;
     final height = double.tryParse(_heightController.text) ?? 0.0;
+      
+
 
     try {
       await DBHelper.insertBabyProfile(name, age, weight, height);

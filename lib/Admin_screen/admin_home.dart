@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/screens/login_screen.dart'; // Make sure this path is correct
 import 'manage_parent.dart'; // Import your ManageParentsScreen
 import 'package:nourish_baby_app/screens/db_helper.dart'; // Import your DBHelper
+import 'profile_babies.dart'; // Import your BabyProfilesScreen
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -76,7 +77,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildDrawerItem(context, Icons.child_care, "Manage Babies"),
+            _buildDrawerItem(
+              context,
+              Icons.child_care,
+              "Manage Babies",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const BabyProfilesScreen()),
+                );
+              },
+            ),
             _buildDrawerItem(context, Icons.restaurant, "Manage Meals"),
             _buildDrawerItem(context, Icons.local_hospital, "Health Tracker"),
             _buildDrawerItem(context, Icons.lightbulb, "Tips & Articles"),
@@ -106,7 +117,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           Navigator.of(context).pop();
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) =>  LoginScreen()),
+                            MaterialPageRoute(builder: (context) => LoginScreen()),
                             (Route<dynamic> route) => false,
                           );
                         },
@@ -140,7 +151,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildSummaryCard(title: "👶 Baby Profiles", value: "98"),
+            _buildSummaryCard(
+              title: "👶 Baby Profiles",
+              value: "98",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                );
+              },
+            ),
             _buildSummaryCard(title: "🥣 Meals This Week", value: "24"),
             _buildSummaryCard(title: "🩺 Health Checkups", value: "8 Upcoming"),
             _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
