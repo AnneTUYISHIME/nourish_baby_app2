@@ -12,7 +12,6 @@ class DBHelper {
       dbPath,
       version: 3,
       onCreate: (db, version) async {
-        // Create tables for users and their baby profiles
         await db.execute(''' 
           CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +35,6 @@ class DBHelper {
           )
         ''');
 
-        // Create table for admin profiles
         await db.execute(''' 
           CREATE TABLE admin_profiles_babies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +54,12 @@ class DBHelper {
         }
       },
     );
+  }
+
+  // ➡️ ✅ This is the missing method you need to fix the error:
+  static Future<Database> database() async {
+    await init();
+    return _db!;
   }
 
   static Future<Map<String, dynamic>?> checkCredentials(
@@ -104,7 +108,6 @@ class DBHelper {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // User Baby Profile CRUD
   static Future<void> insertBabyProfile(
     String name,
     int age,
@@ -205,13 +208,12 @@ class DBHelper {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  // Admin Baby Profile CRUD
   static Future<void> insertAdminBabyProfile(
     String name,
     int age,
     double weight,
     double height,
-    int adminId, // Linking the profile to an admin
+    int adminId,
   ) async {
     await init();
     await _db!.insert('admin_profiles_babies', {
@@ -258,13 +260,8 @@ class DBHelper {
     );
     return result.isNotEmpty ? result.first : null;
   }
-  
-  // 🚀🚀🚀 --- New Methods for Baby Profile Management --- 🚀🚀🚀
 
-  /// Search Baby Profiles by name
-  static Future<List<Map<String, dynamic>>> searchBabyProfiles(
-    String keyword,
-  ) async {
+  static Future<List<Map<String, dynamic>>> searchBabyProfiles(String keyword) async {
     await init();
     return await _db!.query(
       'baby_profile',
@@ -273,11 +270,7 @@ class DBHelper {
     );
   }
 
-  /// Filter Baby Profiles by age range
-  static Future<List<Map<String, dynamic>>> filterBabyProfilesByAge(
-    int minAge,
-    int maxAge,
-  ) async {
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByAge(int minAge, int maxAge) async {
     await init();
     return await _db!.query(
       'baby_profile',
@@ -286,11 +279,7 @@ class DBHelper {
     );
   }
 
-  /// Filter Baby Profiles by weight range
-  static Future<List<Map<String, dynamic>>> filterBabyProfilesByWeight(
-    double minWeight,
-    double maxWeight,
-  ) async {
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByWeight(double minWeight, double maxWeight) async {
     await init();
     return await _db!.query(
       'baby_profile',
@@ -299,11 +288,7 @@ class DBHelper {
     );
   }
 
-  /// Filter Baby Profiles by height range
-  static Future<List<Map<String, dynamic>>> filterBabyProfilesByHeight(
-    double minHeight,
-    double maxHeight,
-  ) async {
+  static Future<List<Map<String, dynamic>>> filterBabyProfilesByHeight(double minHeight, double maxHeight) async {
     await init();
     return await _db!.query(
       'baby_profile',
@@ -312,13 +297,11 @@ class DBHelper {
     );
   }
 
-  /// Export Baby Profiles Data (for CSV/Excel)
   static Future<List<Map<String, dynamic>>> exportBabyProfilesData() async {
     await init();
     return await _db!.query('baby_profile');
   }
 
-  /// Get detailed Baby Profile by ID
   static Future<Map<String, dynamic>?> getBabyProfileById(int id) async {
     await init();
     final result = await _db!.query(
@@ -327,5 +310,11 @@ class DBHelper {
       whereArgs: [id],
     );
     return result.isNotEmpty ? result.first : null;
+  }
+
+  static Future<int> getTotalBabies() async {
+    final db = await DBHelper.database();
+    final List<Map<String, dynamic>> babies = await db.query('baby_profile'); // corrected table name
+    return babies.length;
   }
 }

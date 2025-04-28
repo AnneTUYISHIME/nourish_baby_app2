@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '/screens/login_screen.dart'; // Make sure this path is correct
-import 'manage_parent.dart'; // Import your ManageParentsScreen
-import 'package:nourish_baby_app/screens/db_helper.dart'; // Import your DBHelper
-import 'profile_babies.dart'; // Import your BabyProfilesScreen
+import '/screens/login_screen.dart';
+import 'manage_parent.dart';
+import 'package:nourish_baby_app/screens/db_helper.dart'; // Ensure this path is correct
+import 'profile_babies.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -13,18 +13,21 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int totalParents = 0; // Default to 0
+  int totalBabies = 0;  // New: total babies count
 
   @override
   void initState() {
     super.initState();
-    fetchTotalParents(); // Fetch total parents when screen loads
+    fetchCounts();
   }
 
-  // Fetch total parents using DBHelper
-  void fetchTotalParents() async {
+  // Fetch total parents and babies
+  void fetchCounts() async {
     int parentsCount = await DBHelper.getTotalParents();
+    int babiesCount = await DBHelper.getTotalBabies(); // You should create this method in DBHelper
     setState(() {
-      totalParents = parentsCount; // Set the real number of parents
+      totalParents = parentsCount;
+      totalBabies = babiesCount;
     });
   }
 
@@ -153,11 +156,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             _buildSummaryCard(
               title: "👶 Baby Profiles",
-              value: "98",
+              value: totalBabies.toString(), // Updated to use real number
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                  MaterialPageRoute(builder: (context) => const BabyProfilesScreen()),
                 );
               },
             ),
