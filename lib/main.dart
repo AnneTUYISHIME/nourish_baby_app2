@@ -6,17 +6,17 @@ import 'screens/register_screen.dart';
 import 'screens/db_helper.dart';
 import 'user_model.dart';
 import 'package:firebase_core/firebase_core.dart';
-//import 'firebase_notification.dart';
+
 import 'screens/meal_plan.dart';
 import 'screens/growth_status.dart';
-//import 'package:timezone/data/latest.dart' as tzData;
+import 'package:timezone/data/latest.dart' as tzData;
 //import 'package:nourish_baby_app/screens/notification_service.dart';
 import 'screens/growth_status.dart';
 
 
 
 //Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
- // await Firebase.initializeApp();
+  //await Firebase.initializeApp();
  // print('🔔 BG Message: ${message.messageId}');
 //}
 
@@ -24,7 +24,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   //tzData.initializeTimeZones();
   //await NotificationService.init();
-  //await Firebase.initializeApp();
+  await Firebase.initializeApp();
   //notificationService.initialize();
  // await DBHelper. deleteDatabaseFile();
   //await DBHelper.init(); // 👈 Then recreate the DB

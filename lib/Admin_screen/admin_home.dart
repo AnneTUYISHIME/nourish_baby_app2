@@ -3,6 +3,7 @@ import '/screens/login_screen.dart';
 import 'manage_parent.dart';
 import 'package:nourish_baby_app/screens/db_helper.dart'; // Ensure this path is correct
 import 'profile_babies.dart';
+import 'meals_week.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -12,8 +13,8 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  int totalParents = 0; // Default to 0
-  int totalBabies = 0;  // New: total babies count
+  int totalParents = 0;
+  int totalBabies = 0;
 
   @override
   void initState() {
@@ -21,10 +22,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     fetchCounts();
   }
 
-  // Fetch total parents and babies
   void fetchCounts() async {
     int parentsCount = await DBHelper.getTotalParents();
-    int babiesCount = await DBHelper.getTotalBabies(); // You should create this method in DBHelper
+    int babiesCount = await DBHelper.getTotalBabies();
     setState(() {
       totalParents = parentsCount;
       totalBabies = babiesCount;
@@ -91,7 +91,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildDrawerItem(context, Icons.restaurant, "Manage Meals"),
+            _buildDrawerItem(
+              context,
+              Icons.restaurant,
+              "Manage Meals",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  ManageMealsScreen()),
+                );
+              },
+            ),
             _buildDrawerItem(context, Icons.local_hospital, "Health Tracker"),
             _buildDrawerItem(context, Icons.lightbulb, "Tips & Articles"),
             _buildDrawerItem(context, Icons.feedback, "Feedback"),
@@ -156,7 +166,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             _buildSummaryCard(
               title: "👶 Baby Profiles",
-              value: totalBabies.toString(), // Updated to use real number
+              value: totalBabies.toString(),
               onTap: () {
                 Navigator.push(
                   context,
@@ -164,7 +174,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildSummaryCard(title: "🥣 Meals This Week", value: "24"),
+            _buildSummaryCard(
+              title: "🥣 Meals This Week",
+              value: "24",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  ManageMealsScreen()),
+                );
+              },
+            ),
             _buildSummaryCard(title: "🩺 Health Checkups", value: "8 Upcoming"),
             _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
             _buildSummaryCard(title: "📊 Growth Stats Accessed", value: "42 Times"),
