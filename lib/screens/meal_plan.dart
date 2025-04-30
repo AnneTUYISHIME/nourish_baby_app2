@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -25,7 +26,37 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     super.initState();
     _initializeNotifications();
     _scheduleFeedingReminder();
+    _setupFirebaseMessaging(); // 👈 Setup push notification listener
     _fetchMeals();
+  }
+
+  Future<void> _setupFirebaseMessaging() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('✅ User granted permission');
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (message.notification != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "${message.notification!.title}: ${message.notification!.body}",
+              ),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      });
+    } else {
+      print('⚠️ User declined or has not accepted permission');
+    }
   }
 
   Future<void> _initializeNotifications() async {
@@ -61,11 +92,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
   tz.TZDateTime _nextInstanceOfFeedingTime() {
     final now = tz.TZDateTime.now(tz.local);
-    final scheduled =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 10);
-    return scheduled.isBefore(now)
-        ? scheduled.add(Duration(days: 1))
-        : scheduled;
+    final scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10);
+    return scheduled.isBefore(now) ? scheduled.add(Duration(days: 1)) : scheduled;
   }
 
   Future<void> _fetchMeals() async {
@@ -115,50 +143,60 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         title: Text("🍽️ ${widget.babyName}'s Meal Plan"),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 10),
-          Text("Select Week",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          DropdownButton<String>(
-            value: selectedWeek,
-            items: ["Week 1", "Week 2", "Week 3", "Week 4"]
-                .map((week) =>
-                    DropdownMenuItem(value: week, child: Text(week)))
-                .toList(),
-            onChanged: (val) {
-              setState(() {
-                selectedWeek = val!;
-              });
-              _fetchMeals(); // Fetch meals when week changes
-            },
-          ),
-          Expanded(
-            child: weeklyMeals.isEmpty
-                ? Center(
-                    child: Text("No meals available for $selectedWeek",
-                        style: TextStyle(color: Colors.grey)))
-                : ListView(
-                    children: weeklyMeals.entries.map((entry) {
-                      String day = entry.key;
-                      List<Map<String, dynamic>> meals = entry.value;
-                      return Card(
-                        margin: EdgeInsets.all(10),
-                        child: ExpansionTile(
-                          title: Text(day),
-                          children: meals
-                              .map((meal) => ListTile(
-                                    title: Text(
-                                        "${meal['mealType']}: ${meal['mealName']}"),
-                                  ))
-                              .toList(),
+      body: widget.babyAgeMonths < 6
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  "👶 Hello ${widget.babyName}, breastfeeding is best for you!\n\n🧑‍🍼 Mummy should take healthy food to help you grow well.",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                SizedBox(height: 10),
+                Text("Select Week",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                DropdownButton<String>(
+                  value: selectedWeek,
+                  items: ["Week 1", "Week 2", "Week 3", "Week 4"]
+                      .map((week) => DropdownMenuItem(value: week, child: Text(week)))
+                      .toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedWeek = val!;
+                    });
+                    _fetchMeals(); // Fetch meals when week changes
+                  },
+                ),
+                Expanded(
+                  child: weeklyMeals.isEmpty
+                      ? Center(
+                          child: Text("No meals available for $selectedWeek",
+                              style: TextStyle(color: Colors.grey)))
+                      : ListView(
+                          children: weeklyMeals.entries.map((entry) {
+                            String day = entry.key;
+                            List<Map<String, dynamic>> meals = entry.value;
+                            return Card(
+                              margin: EdgeInsets.all(10),
+                              child: ExpansionTile(
+                                title: Text(day),
+                                children: meals
+                                    .map((meal) => ListTile(
+                                          title: Text(
+                                              "${meal['mealType']}: ${meal['mealName']}"),
+                                        ))
+                                    .toList(),
+                              ),
+                            );
+                          }).toList(),
                         ),
-                      );
-                    }).toList(),
-                  ),
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
     );
   }
 }
