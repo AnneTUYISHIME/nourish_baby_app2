@@ -15,7 +15,8 @@ class MealPlanScreen extends StatefulWidget {
 }
 
 class _MealPlanScreenState extends State<MealPlanScreen> {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   Map<String, List<Map<String, dynamic>>> weeklyMeals = {};
   String selectedWeek = "Week 1";
 
@@ -60,8 +61,11 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
   tz.TZDateTime _nextInstanceOfFeedingTime() {
     final now = tz.TZDateTime.now(tz.local);
-    final scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10);
-    return scheduled.isBefore(now) ? scheduled.add(Duration(days: 1)) : scheduled;
+    final scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 10);
+    return scheduled.isBefore(now)
+        ? scheduled.add(Duration(days: 1))
+        : scheduled;
   }
 
   Future<void> _fetchMeals() async {
@@ -76,9 +80,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         final data = doc.data()!;
         print("✅ Firestore data found for $selectedWeek: $data");
 
+        final mealsData = data['meals'] as Map<String, dynamic>;
+
+        final parsedMeals = mealsData.map((day, mealList) {
+          final meals = (mealList as List)
+              .map((meal) => Map<String, dynamic>.from(meal))
+              .toList();
+          return MapEntry(day, meals);
+        });
+
         setState(() {
-          weeklyMeals = data.map((day, meals) =>
-              MapEntry(day, List<Map<String, dynamic>>.from(meals)));
+          weeklyMeals = parsedMeals;
         });
       } else {
         print("⚠️ No data found for $selectedWeek in Firestore.");
@@ -106,11 +118,13 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       body: Column(
         children: [
           SizedBox(height: 10),
-          Text("Select Week", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text("Select Week",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           DropdownButton<String>(
             value: selectedWeek,
             items: ["Week 1", "Week 2", "Week 3", "Week 4"]
-                .map((week) => DropdownMenuItem(value: week, child: Text(week)))
+                .map((week) =>
+                    DropdownMenuItem(value: week, child: Text(week)))
                 .toList(),
             onChanged: (val) {
               setState(() {
@@ -121,7 +135,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           ),
           Expanded(
             child: weeklyMeals.isEmpty
-                ? Center(child: Text("No meals available for $selectedWeek", style: TextStyle(color: Colors.grey)))
+                ? Center(
+                    child: Text("No meals available for $selectedWeek",
+                        style: TextStyle(color: Colors.grey)))
                 : ListView(
                     children: weeklyMeals.entries.map((entry) {
                       String day = entry.key;
@@ -132,7 +148,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                           title: Text(day),
                           children: meals
                               .map((meal) => ListTile(
-                                    title: Text("${meal['mealType']}: ${meal['mealName']}"),
+                                    title: Text(
+                                        "${meal['mealType']}: ${meal['mealName']}"),
                                   ))
                               .toList(),
                         ),
