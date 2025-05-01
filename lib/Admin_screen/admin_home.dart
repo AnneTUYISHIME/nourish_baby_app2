@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '/screens/login_screen.dart';
 import 'manage_parent.dart';
-import 'package:nourish_baby_app/screens/db_helper.dart'; // Ensure this path is correct
+import 'package:nourish_baby_app/screens/db_helper.dart';
 import 'profile_babies.dart';
 import 'meals_week.dart';
+import 'Admin_healthTracker.dart'; // <-- Added import
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -98,11 +99,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  ManageMealsScreen()),
+                  MaterialPageRoute(builder: (context) => ManageMealsScreen()),
                 );
               },
             ),
-            _buildDrawerItem(context, Icons.local_hospital, "Health Tracker"),
+            _buildDrawerItem(
+              context,
+              Icons.local_hospital,
+              "Health Tracker",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminHealthScreen()),
+                );
+              },
+            ),
             _buildDrawerItem(context, Icons.lightbulb, "Tips & Articles"),
             _buildDrawerItem(context, Icons.feedback, "Feedback"),
             _buildDrawerItem(context, Icons.settings, "Settings"),
@@ -180,11 +191,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  ManageMealsScreen()),
+                  MaterialPageRoute(builder: (context) => ManageMealsScreen()),
                 );
               },
             ),
-            _buildSummaryCard(title: "🩺 Health Checkups", value: "8 Upcoming"),
+            _buildSummaryCard(
+              title: "🩺 Health Checkups",
+              value: "8 Upcoming",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  AdminHealthScreen()),
+                );
+              },
+            ),
             _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
             _buildSummaryCard(title: "📊 Growth Stats Accessed", value: "42 Times"),
           ],
