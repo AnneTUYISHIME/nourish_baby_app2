@@ -69,7 +69,10 @@ class GrowthStatusScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Growth Status", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Growth Status",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.lightBlue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -78,27 +81,65 @@ class GrowthStatusScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("👶 Baby: $name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              "👶 Baby: $name",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             Text("📅 Age: $age months"),
             Text("⚖️ Weight: $weight kg"),
             Text("📏 Height: $height cm"),
             const SizedBox(height: 10),
-            Text("📊 BMI: ${bmi.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
+            Text(
+              "📊 BMI: ${bmi.toStringAsFixed(2)}",
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 10),
-            Text("🩺 Advice:", style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(advice, style: const TextStyle(fontSize: 16, color: Colors.blueGrey)),
+            Text(
+              "🩺 Advice:",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              advice,
+              style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
+            ),
             const SizedBox(height: 30),
 
-            const Text("📈 Weight Progress", style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg", age: age)),
+            const Text(
+              "📈 Weight Progress",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(
+              height: 220,
+              child: LineChartWidget(
+                spots: getWeightSpots(),
+                yLabel: "kg",
+                age: age,
+              ),
+            ),
 
             const SizedBox(height: 30),
-            const Text("📏 Height Progress", style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm", age: age)),
+            const Text(
+              "📏 Height Progress",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(
+              height: 220,
+              child: LineChartWidget(
+                spots: getHeightSpots(),
+                yLabel: "cm",
+                age: age,
+              ),
+            ),
 
             const SizedBox(height: 30),
-            const Text("🔄 Weight vs Height (Combined)", style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 250, child: ScatterChartWidget(spots: getCombinedGrowthSpots())),
+            const Text(
+              "🔄 Weight vs Height (Combined)",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(
+              height: 250,
+              child: ScatterChartWidget(spots: getCombinedGrowthSpots()),
+            ),
           ],
         ),
       ),
@@ -130,9 +171,12 @@ class LineChartWidget extends StatelessWidget {
             isCurved: true,
             color: Colors.pinkAccent,
             barWidth: 3,
-            belowBarData: BarAreaData(show: true, color: Colors.pinkAccent.withOpacity(0.2)),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.pinkAccent.withOpacity(0.2),
+            ),
             spots: spots,
-          )
+          ),
         ],
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
@@ -140,7 +184,10 @@ class LineChartWidget extends StatelessWidget {
               showTitles: true,
               reservedSize: 40,
               getTitlesWidget: (value, meta) {
-                return Text("${value.toStringAsFixed(0)} $yLabel", style: const TextStyle(fontSize: 12));
+                return Text(
+                  "${value.toStringAsFixed(0)} $yLabel",
+                  style: const TextStyle(fontSize: 12),
+                );
               },
             ),
           ),
@@ -154,7 +201,10 @@ class LineChartWidget extends StatelessWidget {
                 if (valid >= 1 && valid <= 12) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text("$valid mo", style: const TextStyle(fontSize: 12)),
+                    child: Text(
+                      "$valid mo",
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -178,16 +228,21 @@ class ScatterChartWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScatterChart(
       ScatterChartData(
-        scatterSpots: spots.map((spot) => ScatterSpot(
-          spot.x,
-          spot.y,
-          dotPainter: FlDotCirclePainter(
-            radius: 6,
-            color: Colors.teal,
-            strokeWidth: 1,
-            strokeColor: Colors.white,
-          ),
-        )).toList(),
+        scatterSpots:
+            spots
+                .map(
+                  (spot) => ScatterSpot(
+                    spot.x,
+                    spot.y,
+                    dotPainter: FlDotCirclePainter(
+                      radius: 6,
+                      color: Colors.teal,
+                      strokeWidth: 1,
+                      strokeColor: Colors.white,
+                    ),
+                  ),
+                )
+                .toList(),
         gridData: FlGridData(show: true),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
