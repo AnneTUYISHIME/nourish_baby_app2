@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class HealthTrackerScreen extends StatefulWidget {
   const HealthTrackerScreen({super.key});
@@ -9,35 +10,53 @@ class HealthTrackerScreen extends StatefulWidget {
 }
 
 class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
-  // Controllers for medication
   final TextEditingController babyNameController = TextEditingController();
   final TextEditingController medicineController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController timeIntervalController = TextEditingController();
-
-  // Controllers for weekly review
   final TextEditingController weeklyReviewController = TextEditingController();
-
-  // Controllers for recent checkup
   final TextEditingController checkupDateController = TextEditingController();
   final TextEditingController symptomsController = TextEditingController();
   final TextEditingController badFoodController = TextEditingController();
 
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
   String? weeklyReviewText;
 
-  // Firestore references
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  @override
+  void initState() {
+    super.initState();
+    _saveFCMToken();
+  }
+
+  Future<void> _saveFCMToken() async {
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      await firestore.collection('users_tokens').doc('user1').set({
+        'token': fcmToken,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+  }
 
   Future<void> addMedication() async {
     if (babyNameController.text.isNotEmpty &&
         medicineController.text.isNotEmpty &&
         quantityController.text.isNotEmpty &&
         timeIntervalController.text.isNotEmpty) {
-      await firestore.collection('medications').add({
+      final docRef = await firestore.collection('medications').add({
         'baby': babyNameController.text.trim(),
         'medicine': medicineController.text.trim(),
         'quantity': quantityController.text.trim(),
         'interval': timeIntervalController.text.trim(),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // Store trigger data to collection to be read by Firebase Function
+      await firestore.collection('notification_requests').add({
+        'userDocId': 'user1', // assumed static for now
+        'medicine': medicineController.text.trim(),
+        'baby': babyNameController.text.trim(),
+        'sendAfterSeconds': 120, // 2 minutes
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -47,6 +66,10 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
         quantityController.clear();
         timeIntervalController.clear();
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Medication saved. Reminder in 2 minutes!')),
+      );
     }
   }
 

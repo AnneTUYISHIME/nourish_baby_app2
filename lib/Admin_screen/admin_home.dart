@@ -110,7 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AdminHealthScreen()),
+                  MaterialPageRoute(builder: (context) => const AdminHealthDashboard()),
                 );
               },
             ),
@@ -201,7 +201,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  AdminHealthScreen()),
+                  MaterialPageRoute(builder: (context) =>  AdminHealthDashboard ()),
                 );
               },
             ),
