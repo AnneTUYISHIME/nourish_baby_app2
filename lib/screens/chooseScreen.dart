@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'package:nourish_baby_app/Admin_screen/registration_screen.dart';
-//import './Admin_screen/register_screen.dart';
 
 class ChooseRegisterScreen extends StatelessWidget {
   @override
@@ -9,7 +8,11 @@ class ChooseRegisterScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.pink[50],
       appBar: AppBar(
-        title: Text("Choose Registration Type"),
+        title: Text(
+          "Choose Registration Type",
+          style: TextStyle(color: Colors.white), // 👈 White title text
+        ),
+        iconTheme: IconThemeData(color: Colors.white), // 👈 White back arrow
         backgroundColor: Colors.lightBlueAccent,
       ),
       body: Center(
@@ -19,8 +22,11 @@ class ChooseRegisterScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton.icon(
-                icon: Icon(Icons.person_add_alt),
-                label: Text("Register as User"),
+                icon: Icon(Icons.person_add_alt, color: Colors.white), // White icon
+                label: Text(
+                  "Register as User",
+                  style: TextStyle(color: Colors.white),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -34,8 +40,11 @@ class ChooseRegisterScreen extends StatelessWidget {
               ),
               SizedBox(height: 30),
               ElevatedButton.icon(
-                icon: Icon(Icons.admin_panel_settings),
-                label: Text("Register as Admin"),
+                icon: Icon(Icons.admin_panel_settings, color: Colors.white), // White icon
+                label: Text(
+                  "Register as Admin",
+                  style: TextStyle(color: Colors.white),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -43,7 +52,7 @@ class ChooseRegisterScreen extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
+                  backgroundColor: Colors.blueAccent,
                   padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 ),
               ),

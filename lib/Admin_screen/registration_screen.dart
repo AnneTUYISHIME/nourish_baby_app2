@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/db_helper.dart'; // Make sure this path is correct
+import '../screens/db_helper.dart'; // Ensure path is correct
 import '../screens/login_screen.dart';
 
 class AdminRegisterScreen extends StatefulWidget {
@@ -14,19 +14,20 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
   final _passwordController = TextEditingController();
   final _adminKeyController = TextEditingController();
 
-  final String secretAdminKey = 'ADMIN123'; // Secret key to register as admin
+  bool _isPasswordVisible = false;
+  bool _isAdminKeyVisible = false;
 
-  // Register the admin
+  final String secretAdminKey = 'ADMIN123';
+
   void _registerAdmin() async {
     if (_formKey.currentState!.validate()) {
       if (_adminKeyController.text == secretAdminKey) {
         try {
-          // Use the insertAdmin method and save the role as "admin"
           await DBHelper.insertAdmin(
             username: _usernameController.text,
             email: _emailController.text,
             password: _passwordController.text,
-            admin: 'admin', // Save the role as 'admin'
+            admin: 'admin',
           );
 
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -34,7 +35,6 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
             backgroundColor: Colors.green,
           ));
 
-          // Navigate to a login screen or dashboard if needed
           Future.delayed(Duration(seconds: 1), () {
             Navigator.pushReplacement(
               context,
@@ -59,10 +59,14 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFF1F4), // Soft pinkish background
+      backgroundColor: Color(0xFFFFF1F4),
       appBar: AppBar(
         backgroundColor: Colors.lightBlueAccent,
-        title: Text('Admin Registration'),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text(
+          'Admin Registration',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -85,30 +89,78 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
               SizedBox(height: 10),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: !_isPasswordVisible,
                 validator: (value) => value!.length < 6 ? 'Min 6 characters' : null,
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _adminKeyController,
-                decoration: InputDecoration(labelText: 'Admin Key'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Admin Key',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isAdminKeyVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isAdminKeyVisible = !_isAdminKeyVisible;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: !_isAdminKeyVisible,
                 validator: (value) => value!.isEmpty ? 'Enter Admin Key' : null,
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              Align(
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: 150,
+                  height: 40,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _registerAdmin,
+                    child: Text(
+                      'Register',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
                   ),
-                  padding: EdgeInsets.symmetric(vertical: 15),
                 ),
-                onPressed: _registerAdmin,
-                child: Text(
-                  'Register Admin',
-                  style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 20),
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: Text(
+                    "Already have an account? Login",
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ],
