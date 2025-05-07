@@ -4,7 +4,8 @@ import 'manage_parent.dart';
 import 'package:nourish_baby_app/screens/db_helper.dart';
 import 'profile_babies.dart';
 import 'meals_week.dart';
-import 'Admin_healthTracker.dart'; // <-- Added import
+import 'Admin_healthTracker.dart';
+import 'growth_status.dart'; 
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -57,9 +58,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.lightBlue,
-              ),
+              decoration: BoxDecoration(color: Colors.lightBlue),
               child: Text(
                 "Admin Menu",
                 style: TextStyle(
@@ -114,6 +113,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
+            _buildDrawerItem(
+              context,
+              Icons.bar_chart,
+              "Growth Status",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  AdminGrowthStatusScreen(
+                     // babyId :1,
+                 // babyName: "",
+                  )),
+                );
+              },
+            ),
             _buildDrawerItem(context, Icons.lightbulb, "Tips & Articles"),
             _buildDrawerItem(context, Icons.feedback, "Feedback"),
             _buildDrawerItem(context, Icons.settings, "Settings"),
@@ -131,9 +144,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     content: const Text('Are you sure you want to logout?'),
                     actions: [
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: () => Navigator.of(context).pop(),
                         child: const Text('Cancel'),
                       ),
                       TextButton(
@@ -201,12 +212,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) =>  AdminHealthDashboard ()),
+                  MaterialPageRoute(builder: (context) => const AdminHealthDashboard()),
                 );
               },
             ),
             _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
-            _buildSummaryCard(title: "📊 Growth Stats Accessed", value: "42 Times"),
+            _buildSummaryCard(
+              title: "📊 Growth Stats Accessed",
+              value: "42 Times",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>  AdminGrowthStatusScreen(
+                   // babyId :1,
+  
+                        
+                  )),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -218,9 +242,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       onTap: onTap,
       child: Card(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 4,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -254,10 +276,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildDrawerItem(BuildContext context, IconData icon, String title, {VoidCallback? onTap, bool isLogout = false}) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isLogout ? Colors.redAccent : Colors.blueAccent,
-      ),
+      leading: Icon(icon, color: isLogout ? Colors.redAccent : Colors.blueAccent),
       title: Text(
         title,
         style: TextStyle(

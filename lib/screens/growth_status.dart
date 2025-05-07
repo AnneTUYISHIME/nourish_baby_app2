@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ NEW
 
 class GrowthStatusScreen extends StatelessWidget {
   final int babyId;
@@ -62,6 +64,37 @@ class GrowthStatusScreen extends StatelessWidget {
     ];
   }
 
+  Future<void> sendGrowthDataToFirebase(BuildContext context) async {
+    final bmi = calculateBMI();
+
+    try {
+      await FirebaseFirestore.instance.collection("growth_status").add({
+        "babyId": babyId,
+        "name": name,
+        "age": age,
+        "weight": weight,
+        "height": height,
+        "bmi": bmi.toStringAsFixed(2),
+        "timestamp": FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ Growth data sent to Firebase!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print("Firebase Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Error sending data: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bmi = calculateBMI();
@@ -69,10 +102,7 @@ class GrowthStatusScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Growth Status",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Growth Status", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.lightBlue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -81,64 +111,37 @@ class GrowthStatusScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "👶 Baby: $name",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text("👶 Baby: $name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text("📅 Age: $age months"),
             Text("⚖️ Weight: $weight kg"),
             Text("📏 Height: $height cm"),
             const SizedBox(height: 10),
-            Text(
-              "📊 BMI: ${bmi.toStringAsFixed(2)}",
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text("📊 BMI: ${bmi.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 10),
-            Text(
-              "🩺 Advice:",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              advice,
-              style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
-            ),
+            const Text("🩺 Advice:", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(advice, style: const TextStyle(fontSize: 16, color: Colors.blueGrey)),
             const SizedBox(height: 30),
-
-            const Text(
-              "📈 Weight Progress",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(
-              height: 220,
-              child: LineChartWidget(
-                spots: getWeightSpots(),
-                yLabel: "kg",
-                age: age,
+            const Text("📈 Weight Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg", age: age)),
+            const SizedBox(height: 30),
+            const Text("📏 Height Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm", age: age)),
+            const SizedBox(height: 30),
+            const Text("🔄 Weight vs Height (Combined)", style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 250, child: ScatterChartWidget(spots: getCombinedGrowthSpots())),
+            const SizedBox(height: 30),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () => sendGrowthDataToFirebase(context),
+                icon: const Icon(Icons.cloud_upload),
+                label: const Text("Send to Admin (Firebase)"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.pinkAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
               ),
-            ),
-
-            const SizedBox(height: 30),
-            const Text(
-              "📏 Height Progress",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(
-              height: 220,
-              child: LineChartWidget(
-                spots: getHeightSpots(),
-                yLabel: "cm",
-                age: age,
-              ),
-            ),
-
-            const SizedBox(height: 30),
-            const Text(
-              "🔄 Weight vs Height (Combined)",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(
-              height: 250,
-              child: ScatterChartWidget(spots: getCombinedGrowthSpots()),
             ),
           ],
         ),
@@ -147,6 +150,7 @@ class GrowthStatusScreen extends StatelessWidget {
   }
 }
 
+// 👇 Keep your chart widgets as they are
 class LineChartWidget extends StatelessWidget {
   final List<FlSpot> spots;
   final String yLabel;
@@ -184,10 +188,7 @@ class LineChartWidget extends StatelessWidget {
               showTitles: true,
               reservedSize: 40,
               getTitlesWidget: (value, meta) {
-                return Text(
-                  "${value.toStringAsFixed(0)} $yLabel",
-                  style: const TextStyle(fontSize: 12),
-                );
+                return Text("${value.toStringAsFixed(0)} $yLabel", style: const TextStyle(fontSize: 12));
               },
             ),
           ),
@@ -201,10 +202,7 @@ class LineChartWidget extends StatelessWidget {
                 if (valid >= 1 && valid <= 12) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      "$valid mo",
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                    child: Text("$valid mo", style: const TextStyle(fontSize: 12)),
                   );
                 }
                 return const SizedBox.shrink();
@@ -222,27 +220,24 @@ class LineChartWidget extends StatelessWidget {
 class ScatterChartWidget extends StatelessWidget {
   final List<FlSpot> spots;
 
-  const ScatterChartWidget({super.key, required this.spots});
+  const ScatterChartWidget({Key? key, required this.spots}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ScatterChart(
       ScatterChartData(
-        scatterSpots:
-            spots
-                .map(
-                  (spot) => ScatterSpot(
-                    spot.x,
-                    spot.y,
-                    dotPainter: FlDotCirclePainter(
-                      radius: 6,
-                      color: Colors.teal,
-                      strokeWidth: 1,
-                      strokeColor: Colors.white,
-                    ),
+        scatterSpots: spots
+            .map((spot) => ScatterSpot(
+                  spot.x,
+                  spot.y,
+                  dotPainter: FlDotCirclePainter(
+                    radius: 6,
+                    color: Colors.teal,
+                    strokeWidth: 1,
+                    strokeColor: Colors.white,
                   ),
-                )
-                .toList(),
+                ))
+            .toList(),
         gridData: FlGridData(show: true),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
