@@ -1,158 +1,136 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_growth_detailts.dart'; // A separate screen to view and update individual baby
 
-class AdminGrowthStatusScreen extends StatelessWidget {
-  const AdminGrowthStatusScreen({Key? key}) : super(key: key);
+class AdminGrowthDashboard extends StatefulWidget {
+  const AdminGrowthDashboard({Key? key}) : super(key: key);
 
-  Stream<QuerySnapshot> getGrowthStatusStream() {
-    return FirebaseFirestore.instance
-        .collection('growth_status')
-        .orderBy('timestamp', descending: true)
-        .snapshots();
-  }
+  @override
+  State<AdminGrowthDashboard> createState() => _AdminGrowthDashboardState();
+}
 
-  void deleteGrowthEntry(String docId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('growth_status')
-          .doc(docId)
-          .delete();
-    } catch (e) {
-      print("Error deleting entry: $e");
-    }
-  }
-
-  void showBabyHistory(BuildContext context, String babyId, String babyName) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) {
-        return DraggableScrollableSheet(
-          expand: false,
-          builder: (context, scrollController) {
-            return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('growth_status')
-                  .where('babyId', isEqualTo: babyId)
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (ctx, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Error loading history'));
-                }
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-
-                if (docs.isEmpty) {
-                  return const Center(child: Text('No history available.'));
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Growth History for $babyName',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: docs.length,
-                          itemBuilder: (ctx, index) {
-                            final data =
-                                docs[index].data() as Map<String, dynamic>;
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              child: ListTile(
-                                title: Text(
-                                    'Month ${data['month'] ?? '?'} - Height: ${data['height'] ?? '?'}cm, Weight: ${data['weight'] ?? '?'}kg'),
-                                subtitle: Text(
-                                    'BMI: ${data['bmi'] ?? '?'} | Advice: ${data['advice'] ?? 'N/A'}'),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
+class _AdminGrowthDashboardState extends State<AdminGrowthDashboard> {
+  String searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Admin Growth Status")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: getGrowthStatusStream(),
-        builder: (ctx, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Something went wrong"));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      appBar: AppBar(
+        title: const Text("👨‍⚕️ Admin Growth Dashboard"),
+        backgroundColor: Colors.blueAccent,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: "🔍 Search by baby name...",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                setState(() => searchQuery = value.toLowerCase());
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection("growth_status")
+                  .orderBy("timestamp", descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final docs = snapshot.data!.docs;
+                final docs = snapshot.data!.docs.where((doc) {
+                  final name = doc["name"].toString().toLowerCase();
+                  return name.contains(searchQuery);
+                }).toList();
 
-          if (docs.isEmpty) {
-            return const Center(child: Text("No growth data available."));
-          }
+                if (docs.isEmpty) {
+                  return const Center(child: Text("🚫 No matching records."));
+                }
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text("Name")),
-                DataColumn(label: Text("Height (cm)")),
-                DataColumn(label: Text("Weight (kg)")),
-                DataColumn(label: Text("Month")),
-                DataColumn(label: Text("BMI")),
-                DataColumn(label: Text("Advice")),
-                DataColumn(label: Text("Actions")),
-              ],
-              rows: docs.map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return DataRow(cells: [
-                  DataCell(Text(data['name'] ?? '')),
-                  DataCell(Text('${data['height'] ?? '-'}')),
-                  DataCell(Text('${data['weight'] ?? '-'}')),
-                  DataCell(Text('${data['month'] ?? '-'}')),
-                  DataCell(Text('${data['bmi'] ?? '-'}')),
-                  DataCell(Text(data['advice'] ?? '')),
-                  DataCell(Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.visibility),
-                        onPressed: () => showBabyHistory(
-                          context,
-                          data['babyId'] ?? '',
-                          data['name'] ?? 'Baby',
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index];
+                    final babyId = data["babyId"];
+                    final name = data["name"];
+                    final age = data["age"];
+                    final weight = data["weight"];
+                    final height = data["height"];
+                    final bmi = data["bmi"];
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.child_care)),
+                        title: Text("$name (ID: $babyId)"),
+                        subtitle: Text("Age: $age mo | Wt: $weight kg | Ht: $height cm | BMI: $bmi"),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'Edit') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AdminGrowthDetail(
+                                    docId: data.id,
+                                    babyId: babyId,
+                                    name: name,
+                                    age: age,
+                                    weight: weight,
+                                    height: height,
+                                  ),
+                                ),
+                              );
+                            } else if (value == 'Delete') {
+                              _confirmDelete(context, data.id);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'Edit', child: Text('✏️ Edit')),
+                            const PopupMenuItem(value: 'Delete', child: Text('🗑️ Delete')),
+                          ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => deleteGrowthEntry(doc.id),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+                    );
+                  },
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
+  }
+  
+
+  void _confirmDelete(BuildContext context, String docId) async {
+    final confirm = await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Confirm Delete"),
+        content: const Text("Are you sure you want to delete this growth record?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseFirestore.instance.collection("growth_status").doc(docId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Record deleted")),
+      );
+    }
   }
 }
