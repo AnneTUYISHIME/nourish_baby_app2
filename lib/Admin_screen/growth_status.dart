@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'admin_growth_detailts.dart'; // A separate screen to view and update individual baby
+import 'admin_growth_detailts.dart';
+import 'package:nourish_baby_app/screens/growth_status.dart';
+
+//import 'growth_status.dart'; // ✅ Import the user UI here
 
 class AdminGrowthDashboard extends StatefulWidget {
   const AdminGrowthDashboard({Key? key}) : super(key: key);
@@ -71,6 +74,23 @@ class _AdminGrowthDashboardState extends State<AdminGrowthDashboard> {
                         leading: const CircleAvatar(child: Icon(Icons.child_care)),
                         title: Text("$name (ID: $babyId)"),
                         subtitle: Text("Age: $age mo | Wt: $weight kg | Ht: $height cm | BMI: $bmi"),
+
+                        // ✅ Added this to navigate to GrowthStatusScreen (User UI)
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GrowthStatusScreen(
+                                babyId: babyId,
+                                name: name,
+                                age: age,
+                                weight: (weight as num).toDouble(),
+                                height: (height as num).toDouble(),
+                              ),
+                            ),
+                          );
+                        },
+
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) {
                             if (value == 'Edit') {
@@ -107,7 +127,6 @@ class _AdminGrowthDashboardState extends State<AdminGrowthDashboard> {
       ),
     );
   }
-  
 
   void _confirmDelete(BuildContext context, String docId) async {
     final confirm = await showDialog(
