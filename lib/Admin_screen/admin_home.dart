@@ -198,7 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             _buildSummaryCard(
               title: "🥣 Meals This Week",
-              value: "24",
+              value: "",
               onTap: () {
                 Navigator.push(
                   context,
@@ -208,7 +208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             _buildSummaryCard(
               title: "🩺 Health Checkups",
-              value: "8 Upcoming",
+              value: " ",
               onTap: () {
                 Navigator.push(
                   context,
@@ -216,10 +216,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildSummaryCard(title: "📬 Feedback Reports", value: "5 New"),
+            _buildSummaryCard(title: "📬 Feedback Reports", value: ""),
             _buildSummaryCard(
               title: "📊 Growth Stats Accessed",
-              value: "42 Times",
+              value: " ",
               onTap: () {
                 Navigator.push(
                   context,

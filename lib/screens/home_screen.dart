@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'login_screen.dart';
 import 'baby_profile.dart';
-import 'health_tracker.dart';  // Make sure to create this screen
-import 'growth_status.dart';    // Create this screen too
-import 'meal_plan.dart';       // Create this screen as well
+import 'health_tracker.dart';
+import 'growth_status.dart';
+import 'meal_plan.dart';
+import 'notifications_screen.dart'; // NEW
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Logout function to navigate back to login screen
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<String> notifications = [
+    "🍼 Time to feed baby Willo at 2:00 PM",
+    "💉 Vaccination due next week",
+  ];
+
   void _logout(BuildContext context) {
     Navigator.pushReplacement(
       context,
@@ -17,7 +26,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Baby Profile Screen
   void _goToBabyProfile(BuildContext context) {
     Navigator.push(
       context,
@@ -25,18 +33,18 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Meal Planner Screen
   void _goToMealPlanner(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => MealPlanScreen(
-        babyName: 'willo',
-                             babyAgeMonths: 15,
-      )),
+      MaterialPageRoute(
+        builder: (context) => MealPlanScreen(
+          babyName: 'willo',
+          babyAgeMonths: 15,
+        ),
+      ),
     );
   }
 
-  // Navigate to Health Tracker Screen
   void _goToHealthTracker(BuildContext context) {
     Navigator.push(
       context,
@@ -44,27 +52,32 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Navigate to Growth Stats Screen
   void _goToGrowthStats(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => GrowthStatusScreen(
-    babyId :1,
-    name: "",
-    age : 0,
-  weight :0,
-    height:0, 
-      )),
+      MaterialPageRoute(
+        builder: (context) => GrowthStatusScreen(
+          babyId: 1,
+          name: "",
+          age: 0,
+          weight: 0,
+          height: 0,
+        ),
+      ),
     );
   }
 
-  // Navigate to Daily Routine Screen
-  /*void _goToDailyRoutine(BuildContext context) {
+  void _goToNotifications(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => DailyRoutineScreen()), // Add this screen
+      MaterialPageRoute(
+        builder: (context) => NotificationsScreen(notifications: notifications),
+      ),
     );
-  }*/
+    setState(() {
+      notifications.clear(); // Mark notifications as read
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +85,8 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: Colors.pink[50],
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+        leading: const Padding(
+          padding: EdgeInsets.all(8.0),
           child: Icon(Icons.child_care, color: Colors.white, size: 28),
         ),
         title: const Text(
@@ -81,17 +94,50 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {},
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                onPressed: () => _goToNotifications(context),
+              ),
+              if (notifications.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${notifications.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
+            onSelected: (value) {
+              if (value == 'logout') {
+                _logout(context);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Text('Settings'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('Logout'),
+              ),
+            ],
           ),
         ],
       ),
@@ -100,7 +146,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "Welcome, Parent!",
               style: TextStyle(
                 fontSize: 24,
@@ -117,24 +163,32 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: () => _goToBabyProfile(context),
-                    child: _buildDashboardCard("👶 Baby Profile", "Name, Age, Last Feeding"),
+                    child: _buildDashboardCard(
+                      "👶 Baby Profile",
+                      "Name, Age, Last Feeding",
+                    ),
                   ),
                   GestureDetector(
                     onTap: () => _goToMealPlanner(context),
-                    child: _buildDashboardCard("🥣 Meal Planner", "Upcoming Meals"),
+                    child: _buildDashboardCard(
+                      "🥣 Meal Planner",
+                      "Upcoming Meals",
+                    ),
                   ),
                   GestureDetector(
                     onTap: () => _goToHealthTracker(context),
-                    child: _buildDashboardCard("🩺 Health Tracker", "Checkups & Vaccines"),
+                    child: _buildDashboardCard(
+                      "🩺 Health Tracker",
+                      "Checkups & Vaccines",
+                    ),
                   ),
                   GestureDetector(
                     onTap: () => _goToGrowthStats(context),
-                    child: _buildDashboardCard("📊 Growth Stats", "Weight, Height"),
+                    child: _buildDashboardCard(
+                      "📊 Growth Stats",
+                      "Weight, Height",
+                    ),
                   ),
-                 /* GestureDetector(
-                    onTap: () => _goToDailyRoutine(context),
-                    child: _buildDashboardCard("📅 Daily Routine", "Sleep, Play, Feeding"),
-                  ),*/
                 ],
               ),
             ),
@@ -168,7 +222,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.blueAccent,

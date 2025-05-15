@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class HealthTrackerScreen extends StatefulWidget {
   const HealthTrackerScreen({super.key});
@@ -18,6 +19,7 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   final TextEditingController checkupDateController = TextEditingController();
   final TextEditingController symptomsController = TextEditingController();
   final TextEditingController badFoodController = TextEditingController();
+  final TextEditingController messageController = TextEditingController(); // NEW
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   String? weeklyReviewText;
@@ -51,12 +53,11 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Store trigger data to collection to be read by Firebase Function
       await firestore.collection('notification_requests').add({
-        'userDocId': 'user1', // assumed static for now
+        'userDocId': 'user1',
         'medicine': medicineController.text.trim(),
         'baby': babyNameController.text.trim(),
-        'sendAfterSeconds': 120, // 2 minutes
+        'sendAfterSeconds': 120,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -107,6 +108,25 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     }
   }
 
+  Future<void> sendMessageToAdmin() async {
+    final message = messageController.text.trim();
+    if (message.isNotEmpty) {
+      await firestore.collection('feedback_chat').add({
+        'sender': 'mother',
+        'message': message,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        messageController.clear();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message sent to admin')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     babyNameController.dispose();
@@ -117,6 +137,7 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     checkupDateController.dispose();
     symptomsController.dispose();
     badFoodController.dispose();
+    messageController.dispose(); // NEW
     super.dispose();
   }
 
@@ -174,6 +195,69 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
             _buildButton('Add Checkup Info', addCheckup),
             const SizedBox(height: 10),
             _buildFirestoreList('checkups'),
+
+            const SizedBox(height: 30),
+            _buildSectionTitle("💬 Chat with Admin"),
+            StreamBuilder<QuerySnapshot>(
+              stream: firestore
+                  .collection('feedback_chat')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const CircularProgressIndicator();
+                final messages = snapshot.data!.docs;
+
+                return Column(
+                  children: messages.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final isMother = data['sender'] == 'mother';
+                    final timestamp = data['timestamp'] != null
+                        ? DateFormat('MMM d, h:mm a').format(data['timestamp'].toDate())
+                        : 'Just now';
+
+                    return Align(
+                      alignment: isMother ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Card(
+                        color: isMother ? Colors.pink[100] : Colors.blue[100],
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(data['message']),
+                              const SizedBox(height: 5),
+                              Text(timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    decoration: const InputDecoration(
+                      hintText: 'Type message...',
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                  onPressed: sendMessageToAdmin,
+                  child: const Icon(Icons.send, color: Colors.white),
+                ),
+              ],
+            ),
           ],
         ),
       ),
