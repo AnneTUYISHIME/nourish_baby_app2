@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// 📜 Notification History screen
+
 class NotificationHistoryScreen extends StatelessWidget {
   final List<String> history;
 

@@ -94,7 +94,7 @@ class _BabyProfilesScreenState extends State<BabyProfilesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Baby Profiles'),
+        title: const Text('Baby Profiles '),
         backgroundColor: Colors.pinkAccent.shade100,
       ),
       backgroundColor: Colors.blue.shade50,

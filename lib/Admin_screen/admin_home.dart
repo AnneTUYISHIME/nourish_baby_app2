@@ -187,7 +187,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               },
             ),
             _buildSummaryCard(
-              title: "👶 Baby Profiles",
+              title: "👶 Baby Profiles 1000 ",
               value: totalBabies.toString(),
               onTap: () {
                 Navigator.push(

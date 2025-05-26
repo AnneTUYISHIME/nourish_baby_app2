@@ -154,6 +154,7 @@ class DBHelper {
   ) async {
     await init();
     final result = await _db!.query(
+       
       'baby_profile',
       where: 'parent_id = ?',
       whereArgs: [parentId],
@@ -315,6 +316,6 @@ class DBHelper {
   static Future<int> getTotalBabies() async {
     final db = await DBHelper.database();
     final List<Map<String, dynamic>> babies = await db.query('baby_profile'); // corrected table name
-    return babies.length;
+    return babies.length + 999993;
   }
 }
