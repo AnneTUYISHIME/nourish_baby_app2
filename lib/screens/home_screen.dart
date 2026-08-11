@@ -4,7 +4,9 @@ import 'baby_profile.dart';
 import 'Health_tracker.dart';
 import 'growth_status.dart';
 import 'meal_plan.dart';
-import 'notifications_screen.dart'; // NEW
+import 'notifications_screen.dart';
+import 'more_tips.dart';
+import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,6 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _goToTips(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MoreTipsScreen()),
+    );
+  }
+
   void _goToNotifications(BuildContext context) {
     Navigator.push(
       context,
@@ -75,24 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     setState(() {
-      notifications.clear(); // Mark notifications as read
+      notifications.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.pink[50],
       appBar: AppBar(
-        backgroundColor: Colors.blueAccent,
         leading: const Padding(
           padding: EdgeInsets.all(8.0),
           child: Icon(Icons.child_care, color: Colors.white, size: 28),
         ),
-        title: const Text(
-          "Nourish Baby App",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Nourish Baby App 🍼"),
         actions: [
           Stack(
             children: [
@@ -106,16 +110,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
+                    decoration: const BoxDecoration(
+                      color: AppColors.orange,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       '${notifications.length}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.white),
                     ),
                   ),
                 ),
@@ -129,14 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'settings',
-                child: Text('Settings'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('Logout'),
-              ),
+              const PopupMenuItem<String>(value: 'settings', child: Text('Settings')),
+              const PopupMenuItem<String>(value: 'logout', child: Text('Logout')),
             ],
           ),
         ],
@@ -146,94 +141,77 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Welcome, Parent!",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.pink, AppColors.purple],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Text(
+                "Hey there! 👋 Ready to check in on your little one?",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
                 children: [
-                  GestureDetector(
+                  FunCard(
+                    icon: Icons.child_care,
+                    color: AppColors.pink,
+                    title: "Baby Profile",
+                    subtitle: "Name, Age & Feeding",
                     onTap: () => _goToBabyProfile(context),
-                    child: _buildDashboardCard(
-                      "👶 Baby Profile",
-                      "Name, Age, Last Feeding",
-                    ),
                   ),
-                  GestureDetector(
+                  FunCard(
+                    icon: Icons.restaurant_menu,
+                    color: AppColors.orange,
+                    title: "Meal Planner",
+                    subtitle: "Upcoming Meals",
                     onTap: () => _goToMealPlanner(context),
-                    child: _buildDashboardCard(
-                      "🥣 Meal Planner",
-                      "Upcoming Meals",
-                    ),
                   ),
-                  GestureDetector(
+                  FunCard(
+                    icon: Icons.local_hospital,
+                    color: AppColors.teal,
+                    title: "Health Tracker",
+                    subtitle: "Checkups & Vaccines",
                     onTap: () => _goToHealthTracker(context),
-                    child: _buildDashboardCard(
-                      "🩺 Health Tracker",
-                      "Checkups & Vaccines",
-                    ),
                   ),
-                  GestureDetector(
+                  FunCard(
+                    icon: Icons.show_chart,
+                    color: AppColors.blue,
+                    title: "Growth Stats",
+                    subtitle: "Weight & Height",
                     onTap: () => _goToGrowthStats(context),
-                    child: _buildDashboardCard(
-                      "📊 Growth Stats",
-                      "Weight, Height",
-                    ),
+                  ),
+                  FunCard(
+                    icon: Icons.lightbulb,
+                    color: AppColors.yellow,
+                    title: "Tips & Articles",
+                    subtitle: "Nutrition Advice",
+                    onTap: () => _goToTips(context),
+                  ),
+                  FunCard(
+                    icon: Icons.notifications_active,
+                    color: AppColors.purple,
+                    title: "Notifications",
+                    subtitle: "${notifications.length} new",
+                    onTap: () => _goToNotifications(context),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blueAccent,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: "Schedule"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Activity Log"),
-          BottomNavigationBarItem(icon: Icon(Icons.local_hospital), label: "Health"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDashboardCard(String title, String subtitle) {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

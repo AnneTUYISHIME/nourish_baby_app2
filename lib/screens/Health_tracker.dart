@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_theme.dart';
 
 class HealthTrackerScreen extends StatefulWidget {
   const HealthTrackerScreen({super.key});
@@ -144,28 +145,23 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F5),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF87CEEB),
-        title: const Text('Health Tracker'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('🩺 Health Tracker')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle("💊 Current Medication"),
+            _buildSectionTitle("💊 Current Medication", AppColors.pink),
             _buildTextField(babyNameController, 'Baby Name'),
             _buildTextField(medicineController, 'Medicine Name'),
             _buildTextField(quantityController, 'Quantity to be taken'),
             _buildTextField(timeIntervalController, 'Time Interval (e.g., every 6 hours)'),
-            _buildButton('Add Medication', addMedication),
+            _buildButton('Add Medication', addMedication, AppColors.pink),
             const SizedBox(height: 10),
             _buildFirestoreList('medications'),
 
             const SizedBox(height: 30),
-            _buildSectionTitle("📝 Weekly Meal Review"),
+            _buildSectionTitle("📝 Weekly Meal Review", AppColors.orange),
             TextField(
               controller: weeklyReviewController,
               maxLines: 4,
@@ -177,7 +173,7 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            _buildButton('Submit Weekly Review', submitWeeklyReview),
+            _buildButton('Submit Weekly Review', submitWeeklyReview, AppColors.orange),
             if (weeklyReviewText != null && weeklyReviewText!.isNotEmpty)
               Card(
                 child: ListTile(
@@ -188,16 +184,16 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
               ),
 
             const SizedBox(height: 30),
-            _buildSectionTitle("🩺 Recent Checkups"),
+            _buildSectionTitle("🩺 Recent Checkups", AppColors.teal),
             _buildTextField(checkupDateController, 'Checkup Date (e.g., 2025-05-01)'),
             _buildTextField(symptomsController, 'Signs & Symptoms'),
             _buildTextField(badFoodController, 'Which food was not good?'),
-            _buildButton('Add Checkup Info', addCheckup),
+            _buildButton('Add Checkup Info', addCheckup, AppColors.teal),
             const SizedBox(height: 10),
             _buildFirestoreList('checkups'),
 
             const SizedBox(height: 30),
-            _buildSectionTitle("💬 Chat with Admin"),
+            _buildSectionTitle("💬 Chat with Admin", AppColors.purple),
             StreamBuilder<QuerySnapshot>(
               stream: firestore
                   .collection('feedback_chat')
@@ -304,11 +300,11 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, [Color color = AppColors.pink]) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Text(title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink)),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
     );
   }
 
@@ -317,22 +313,16 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: TextField(
         controller: controller,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: Colors.white,
-          border: const OutlineInputBorder(),
-        ),
+        decoration: InputDecoration(hintText: hint),
       ),
     );
   }
 
-  Widget _buildButton(String text, VoidCallback onPressed) {
+  Widget _buildButton(String text, VoidCallback onPressed, [Color color = AppColors.pink]) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink, padding: const EdgeInsets.all(15)),
+        style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.all(15)),
         onPressed: onPressed,
         child: Text(text, style: const TextStyle(color: Colors.white)),
       ),

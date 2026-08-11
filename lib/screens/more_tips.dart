@@ -1,92 +1,56 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class MoreTipsScreen extends StatelessWidget {
   const MoreTipsScreen({super.key});
 
+  static const _underSix = [
+    ("🍼 Breastfeed Frequently",
+        "Breastfeed your baby every 2–3 hours to ensure proper nutrition and bonding."),
+    ("🧷 Change Diapers Regularly",
+        "Change your baby’s diapers every 1–2 hours to keep their skin healthy."),
+    ("🧴 Monitor Skin for Allergies",
+        "Check for any skin reactions, especially when using oils or new clothing."),
+    ("🧹 Keep Baby’s Room Clean",
+        "Regularly clean and sanitize your baby’s room and toys to prevent infections."),
+    ("😴 Get Enough Rest (For Mom)",
+        "Rest whenever the baby sleeps. A well-rested mom can care better."),
+    ("🎶 Bond with Baby",
+        "Smile at your baby, sing lullabies, and talk during breastfeeding for emotional growth."),
+    ("🏃‍♀️ Gentle Exercises",
+        "Do light exercises or stretching to stay healthy and energized."),
+    ("🍼 Exclusive Breastfeeding",
+        "Avoid mixing food. Exclusively breastfeed up to 6 months before introducing solids."),
+  ];
+
+  static const _overSix = [
+    ("🍼 When to Introduce Solids",
+        "Begin around 6 months. Start with soft pureed veggies like pumpkin, sweet potatoes, and carrots."),
+    ("🚫 Foods to Avoid",
+        "Avoid honey (risk of botulism), whole nuts, added salt/sugar, and cow milk before 1 year."),
+    ("💧 Fluids Matter", "Offer sips of water during meals after 6 months. Avoid juice or sugary drinks."),
+    ("🥦 Iron-Rich Foods",
+        "Include lentils, fortified cereals, egg yolks, and pureed meats to support growth."),
+    ("🧠 Brain Boosters", "Avocados, fish (no bones), and breastmilk help brain development."),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.pink[50],
-      appBar: AppBar(
-  title: Text(
-    "💡 More Baby Nutrition Tips",
-    style: TextStyle(color: Colors.white),
-  ),
-  backgroundColor: Colors.lightBlue[200],
-  centerTitle: true,
-  iconTheme: IconThemeData(color: Colors.white), // Also makes the back button white
-),
-
-      body: Padding(
+      appBar: AppBar(title: const Text("💡 Nutrition Tips")),
+      body: ListView(
         padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            Text(
-              "👶 Tips for Babies Below 6 Months",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pink),
-            ),
-            SizedBox(height: 10),
-            TipCard(
-              title: "🍼 Breastfeed Frequently",
-              tip: "Breastfeed your baby every 2–3 hours to ensure proper nutrition and bonding.",
-            ),
-            TipCard(
-              title: "🧷 Change Diapers Regularly",
-              tip: "Change your baby’s diapers every 1–2 hours to keep their skin healthy.",
-            ),
-            TipCard(
-              title: "🧴 Monitor Skin for Allergies",
-              tip: "Check for any skin reactions, especially when using oils or new clothing.",
-            ),
-            TipCard(
-              title: "🧹 Keep Baby’s Room Clean",
-              tip: "Regularly clean and sanitize your baby’s room and toys to prevent infections.",
-            ),
-            TipCard(
-              title: "😴 Get Enough Rest (For Mom)",
-              tip: "Rest whenever the baby sleeps. A well-rested mom can care better.",
-            ),
-            TipCard(
-              title: "🎶 Bond with Baby",
-              tip: "Smile at your baby, sing lullabies, and talk during breastfeeding for emotional growth.",
-            ),
-            TipCard(
-              title: "🏃‍♀️ Gentle Exercises",
-              tip: "Do light exercises or stretching to stay healthy and energized.",
-            ),
-            TipCard(
-              title: "🍼 Exclusive Breastfeeding",
-              tip: "Avoid mixing food. Exclusively breastfeed up to 6 months before introducing solids.",
-            ),
-
-            SizedBox(height: 24),
-            Text(
-              "👶 Tips for Babies Above 6 Months",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pink),
-            ),
-            SizedBox(height: 10),
-            TipCard(
-              title: "🍼 When to Introduce Solids",
-              tip: "Begin around 6 months. Start with soft pureed veggies like pumpkin, sweet potatoes, and carrots.",
-            ),
-            TipCard(
-              title: "🚫 Foods to Avoid",
-              tip: "Avoid honey (risk of botulism), whole nuts, added salt/sugar, and cow milk before 1 year.",
-            ),
-            TipCard(
-              title: "💧 Fluids Matter",
-              tip: "Offer sips of water during meals after 6 months. Avoid juice or sugary drinks.",
-            ),
-            TipCard(
-              title: "🥦 Iron-Rich Foods",
-              tip: "Include lentils, fortified cereals, egg yolks, and pureed meats to support growth.",
-            ),
-            TipCard(
-              title: "🧠 Brain Boosters",
-              tip: "Avocados, fish (no bones), and breastmilk help brain development.",
-            ),
-          ],
-        ),
+        children: [
+          const FunSectionTitle(emoji: "👶", title: "Below 6 Months", color: AppColors.pink),
+          ..._underSix.asMap().entries.map(
+                (e) => TipCard(title: e.value.$1, tip: e.value.$2, color: AppColors.forIndex(e.key)),
+              ),
+          const SizedBox(height: 20),
+          const FunSectionTitle(emoji: "🧒", title: "Above 6 Months", color: AppColors.blue),
+          ..._overSix.asMap().entries.map(
+                (e) => TipCard(title: e.value.$1, tip: e.value.$2, color: AppColors.forIndex(e.key + 2)),
+              ),
+        ],
       ),
     );
   }
@@ -95,30 +59,30 @@ class MoreTipsScreen extends StatelessWidget {
 class TipCard extends StatelessWidget {
   final String title;
   final String tip;
+  final Color color;
 
-  const TipCard({required this.title, required this.tip});
+  const TipCard({super.key, required this.title, required this.tip, this.color = AppColors.pink});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border(left: BorderSide(color: color, width: 5)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style:
-                  TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.pinkAccent),
-            ),
-            SizedBox(height: 6),
-            Text(
-              tip,
-              style: TextStyle(fontSize: 14, color: Colors.black87),
-            ),
+            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 6),
+            Text(tip, style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.3)),
           ],
         ),
       ),

@@ -8,6 +8,7 @@ import 'screens/landing_screen.dart';
 import 'user_model.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,13 +27,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Baby Care App',
-        theme: ThemeData(
-          primaryColor: Colors.pinkAccent,
-          colorScheme: ColorScheme.light(
-            primary: Colors.pinkAccent,
-            secondary: Colors.blueAccent,
-          ),
-        ),
+        theme: buildAppTheme(),
         initialRoute: '/landing',
         routes: {
           '/landing': (context) => const LandingScreen(),

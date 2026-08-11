@@ -5,7 +5,10 @@ import 'package:nourish_baby_app/screens/db_helper.dart';
 import 'profile_babies.dart';
 import 'meals_week.dart';
 import 'Admin_healthTracker.dart';
-import 'growth_status.dart'; 
+import 'growth_status.dart';
+import '../screens/feedback_screen.dart';
+import '../screens/more_tips.dart';
+import '../theme/app_theme.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -36,14 +39,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.pink[50],
       appBar: AppBar(
-        backgroundColor: Colors.lightBlue,
-        title: const Text(
-          "Admin Dashboard",
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text("🛠️ Admin Dashboard"),
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -57,15 +54,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.lightBlue),
-              child: Text(
-                "Admin Menu",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.blue, AppColors.purple],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: Colors.white, size: 30),
+                  SizedBox(width: 10),
+                  Text(
+                    "Admin Menu",
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
             _buildDrawerItem(context, Icons.dashboard, "Dashboard"),
@@ -127,8 +132,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildDrawerItem(context, Icons.lightbulb, "Tips & Articles"),
-            _buildDrawerItem(context, Icons.feedback, "Feedback"),
+            _buildDrawerItem(
+              context,
+              Icons.lightbulb,
+              "Tips & Articles",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MoreTipsScreen()),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              context,
+              Icons.feedback,
+              "Feedback",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+                );
+              },
+            ),
             _buildDrawerItem(context, Icons.settings, "Settings"),
             const Divider(),
             _buildDrawerItem(
@@ -171,104 +196,89 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSummaryCard(
-              title: "👨‍👩‍👧‍👦 Total Parents",
-              value: totalParents.toString(),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ManageParentsScreen()),
-                );
-              },
-            ),
-            _buildSummaryCard(
-              title: "👶 Baby Profiles",
-              value: totalBabies.toString(),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const BabyProfilesScreen()),
-                );
-              },
-            ),
-            _buildSummaryCard(
-              title: "🥣 Meals This Week",
-              value: "",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ManageMealsScreen()),
-                );
-              },
-            ),
-            _buildSummaryCard(
-              title: "🩺 Health Checkups",
-              value: " ",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AdminHealthDashboard()),
-                );
-              },
-            ),
-            _buildSummaryCard(title: "📬 Feedback Reports", value: ""),
-            _buildSummaryCard(
-              title: "📊 Growth Stats Accessed",
-              value: " ",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) =>  AdminGrowthDashboard(
-                   // babyId :1,
-  
-                        
-                  )),
-                );
-              },
+            const FunSectionTitle(emoji: "👋", title: "Welcome back, Admin!", color: AppColors.purple),
+            const SizedBox(height: 8),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                children: [
+                  FunCard(
+                    icon: Icons.people,
+                    color: AppColors.blue,
+                    title: "Total Parents",
+                    subtitle: totalParents.toString(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ManageParentsScreen()),
+                      );
+                    },
+                  ),
+                  FunCard(
+                    icon: Icons.child_care,
+                    color: AppColors.pink,
+                    title: "Baby Profiles",
+                    subtitle: totalBabies.toString(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const BabyProfilesScreen()),
+                      );
+                    },
+                  ),
+                  FunCard(
+                    icon: Icons.restaurant,
+                    color: AppColors.orange,
+                    title: "Meals This Week",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ManageMealsScreen()),
+                      );
+                    },
+                  ),
+                  FunCard(
+                    icon: Icons.local_hospital,
+                    color: AppColors.teal,
+                    title: "Health Checkups",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AdminHealthDashboard()),
+                      );
+                    },
+                  ),
+                  FunCard(
+                    icon: Icons.feedback,
+                    color: AppColors.yellow,
+                    title: "Feedback Reports",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FeedbackScreen()),
+                      );
+                    },
+                  ),
+                  FunCard(
+                    icon: Icons.show_chart,
+                    color: AppColors.purple,
+                    title: "Growth Stats",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AdminGrowthDashboard()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard({required String title, required String value, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

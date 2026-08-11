@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../theme/app_theme.dart';
 
 class MealPlanScreen extends StatefulWidget {
   final String babyName;
@@ -148,59 +149,91 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.pink[50],
-      appBar: AppBar(
-        backgroundColor: Colors.lightBlue[300],
-        title: Text("🍽️ ${widget.babyName}'s Meal Plan"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text("🍽️ ${widget.babyName}'s Meal Plan")),
       body: widget.babyAgeMonths < 6
           ? Center(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  "👶 Hello ${widget.babyName}, breastfeeding is best for you!\n\n🧑‍🍼 Mummy should take healthy food to help you grow well.",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                  textAlign: TextAlign.center,
+                padding: const EdgeInsets.all(24.0),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: Text(
+                    "👶 Hello ${widget.babyName}, breastfeeding is best for you!\n\n🧑‍🍼 Mummy should take healthy food to help you grow well.",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             )
           : Column(
               children: [
-                SizedBox(height: 10),
-                Text("Select Week",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                DropdownButton<String>(
-                  value: selectedWeek,
-                  items: ["Week 1", "Week 2", "Week 3", "Week 4"]
-                      .map((week) => DropdownMenuItem(value: week, child: Text(week)))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      selectedWeek = val!;
-                    });
-                    _fetchMeals(); // Fetch meals when week changes
-                  },
+                const SizedBox(height: 14),
+                FunSectionTitle(emoji: "🗓️", title: "Select Week", color: AppColors.orange),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    children: ["Week 1", "Week 2", "Week 3", "Week 4"].map((week) {
+                      final selected = week == selectedWeek;
+                      return ChoiceChip(
+                        label: Text(week),
+                        selected: selected,
+                        selectedColor: AppColors.orange,
+                        labelStyle: TextStyle(
+                          color: selected ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (_) {
+                          setState(() => selectedWeek = week);
+                          _fetchMeals();
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
+                const SizedBox(height: 10),
                 Expanded(
                   child: weeklyMeals.isEmpty
                       ? Center(
-                          child: Text("No meals available for $selectedWeek",
-                              style: TextStyle(color: Colors.grey)))
+                          child: Text("No meals available for $selectedWeek yet 🍽️",
+                              style: TextStyle(color: Colors.grey[600])))
                       : ListView(
-                          children: weeklyMeals.entries.map((entry) {
-                            String day = entry.key;
-                            List<Map<String, dynamic>> meals = entry.value;
-                            return Card(
-                              margin: EdgeInsets.all(10),
-                              child: ExpansionTile(
-                                title: Text(day),
-                                children: meals
-                                    .map((meal) => ListTile(
-                                          title: Text(
-                                              "${meal['mealType']}: ${meal['mealName']}"),
-                                        ))
-                                    .toList(),
+                          padding: const EdgeInsets.all(12),
+                          children: weeklyMeals.entries.toList().asMap().entries.map((e) {
+                            final index = e.key;
+                            final day = e.value.key;
+                            final meals = e.value.value;
+                            final color = AppColors.forIndex(index);
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3)),
+                                ],
+                              ),
+                              child: Theme(
+                                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                                child: ExpansionTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: color.withOpacity(0.15),
+                                    child: Icon(Icons.restaurant, color: color, size: 18),
+                                  ),
+                                  title: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  children: meals
+                                      .map((meal) => ListTile(
+                                            leading: const Icon(Icons.circle, size: 8, color: Colors.grey),
+                                            title: Text("${meal['mealType']}: ${meal['mealName']}"),
+                                          ))
+                                      .toList(),
+                                ),
                               ),
                             );
                           }).toList(),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../theme/app_theme.dart';
 
 class GrowthStatusScreen extends StatefulWidget {
   final String babyId;
@@ -140,45 +141,58 @@ class _GrowthStatusScreenState extends State<GrowthStatusScreen> {
     final advice = getHealthAdvice(bmi);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Growth Status", style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.lightBlue,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      appBar: AppBar(title: Text("📊 ${widget.name.isEmpty ? 'Growth' : widget.name}'s Growth")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("👶 Baby: ${widget.name}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text("📅 Age: ${widget.age} months"),
-            Text("⚖️ Weight: $currentWeight kg"),
-            Text("📏 Height: $currentHeight cm"),
-            const SizedBox(height: 10),
-            Text("📊 BMI: ${bmi.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 10),
-            const Text("🩺 Advice:", style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(advice, style: const TextStyle(fontSize: 16, color: Colors.blueGrey)),
-            const SizedBox(height: 30),
-            const Text("📈 Weight Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FunPill(label: "📅 ${widget.age} mo", color: AppColors.blue),
+                FunPill(label: "⚖️ $currentWeight kg", color: AppColors.teal),
+                FunPill(label: "📏 $currentHeight cm", color: AppColors.purple),
+                FunPill(label: "📊 BMI ${bmi.toStringAsFixed(1)}", color: AppColors.orange),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.pink.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.pink.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("🩺 Advice", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 6),
+                  Text(advice, style: const TextStyle(fontSize: 15, color: Colors.blueGrey)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            FunSectionTitle(emoji: "📈", title: "Weight Progress", color: AppColors.teal),
             SizedBox(height: 220, child: LineChartWidget(spots: getWeightSpots(), yLabel: "kg", age: widget.age)),
-            const SizedBox(height: 30),
-            const Text("📏 Height Progress", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            FunSectionTitle(emoji: "📏", title: "Height Progress", color: AppColors.blue),
             SizedBox(height: 220, child: LineChartWidget(spots: getHeightSpots(), yLabel: "cm", age: widget.age)),
-            const SizedBox(height: 30),
-            const Text("🔄 Weight vs Height (Combined)", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            FunSectionTitle(emoji: "🔄", title: "Weight vs Height", color: AppColors.purple),
             SizedBox(height: 250, child: ScatterChartWidget(spots: getCombinedGrowthSpots())),
             const SizedBox(height: 30),
             Center(
               child: ElevatedButton.icon(
                 onPressed: () => sendGrowthDataToFirebase(context),
                 icon: const Icon(Icons.cloud_upload),
-                label: const Text("Update Growth Data (Firebase)"),
+                label: const Text("Save Growth Update"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.pink,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  textStyle: const TextStyle(fontSize: 16),
                 ),
               ),
             ),
