@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 
@@ -12,23 +13,47 @@ class HealthTrackerScreen extends StatefulWidget {
 }
 
 class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
+  final TextEditingController caregiverController = TextEditingController();
+
   final TextEditingController babyNameController = TextEditingController();
   final TextEditingController medicineController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
-  final TextEditingController timeIntervalController = TextEditingController();
+  final TextEditingController medIntervalController = TextEditingController();
+
+  final TextEditingController diaperIntervalController = TextEditingController();
+  final TextEditingController feedingIntervalController = TextEditingController();
+
   final TextEditingController weeklyReviewController = TextEditingController();
   final TextEditingController checkupDateController = TextEditingController();
   final TextEditingController symptomsController = TextEditingController();
   final TextEditingController badFoodController = TextEditingController();
-  final TextEditingController messageController = TextEditingController(); // NEW
+  final TextEditingController messageController = TextEditingController();
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+
   String? weeklyReviewText;
 
   @override
   void initState() {
     super.initState();
+    _initNotifications();
     _saveFCMToken();
+  }
+
+  Future<void> _initNotifications() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    await _notifications.initialize(
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    );
+    await _notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
   Future<void> _saveFCMToken() async {
@@ -41,38 +66,152 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     }
   }
 
-  Future<void> addMedication() async {
-    if (babyNameController.text.isNotEmpty &&
-        medicineController.text.isNotEmpty &&
-        quantityController.text.isNotEmpty &&
-        timeIntervalController.text.isNotEmpty) {
-      final docRef = await firestore.collection('medications').add({
-        'baby': babyNameController.text.trim(),
-        'medicine': medicineController.text.trim(),
-        'quantity': quantityController.text.trim(),
-        'interval': timeIntervalController.text.trim(),
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+  String get _caregiverLabel =>
+      caregiverController.text.trim().isEmpty ? "Caregiver" : caregiverController.text.trim();
 
-      await firestore.collection('notification_requests').add({
-        'userDocId': 'user1',
-        'medicine': medicineController.text.trim(),
-        'baby': babyNameController.text.trim(),
-        'sendAfterSeconds': 120,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+  int _idFor(String docId) => docId.hashCode & 0x7fffffff;
 
-      setState(() {
-        babyNameController.clear();
-        medicineController.clear();
-        quantityController.clear();
-        timeIntervalController.clear();
-      });
+  Future<void> _scheduleReminder({
+    required int id,
+    required String title,
+    required String body,
+    required int intervalHours,
+  }) async {
+    await _notifications.periodicallyShowWithDuration(
+      id,
+      title,
+      body,
+      Duration(hours: intervalHours),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'care_reminders_channel',
+          'Baby Care Reminders',
+          channelDescription: 'Medication, diaper, and feeding reminders',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Medication saved. Reminder in 2 minutes!')),
-      );
+  Future<void> _cancelReminder(String collection, String docId, int? notificationId) async {
+    if (notificationId != null) {
+      await _notifications.cancel(notificationId);
     }
+    await firestore.collection(collection).doc(docId).delete();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Reminder cancelled')),
+    );
+  }
+
+  Future<void> addMedication() async {
+    final interval = int.tryParse(medIntervalController.text.trim());
+    if (babyNameController.text.trim().isEmpty ||
+        medicineController.text.trim().isEmpty ||
+        quantityController.text.trim().isEmpty ||
+        interval == null ||
+        interval <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fill in all fields with a valid interval (in hours)')),
+      );
+      return;
+    }
+
+    final baby = babyNameController.text.trim();
+    final medicine = medicineController.text.trim();
+    final quantity = quantityController.text.trim();
+
+    final docRef = await firestore.collection('medications').add({
+      'baby': baby,
+      'medicine': medicine,
+      'quantity': quantity,
+      'intervalHours': interval,
+      'caregiver': _caregiverLabel,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    final id = _idFor(docRef.id);
+    await docRef.update({'notificationId': id});
+
+    await _scheduleReminder(
+      id: id,
+      title: "💊 Medication Time",
+      body: "$_caregiverLabel, give $baby $quantity of $medicine now!",
+      intervalHours: interval,
+    );
+
+    babyNameController.clear();
+    medicineController.clear();
+    quantityController.clear();
+    medIntervalController.clear();
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('💊 Reminder set — every $interval hour(s)!')),
+    );
+  }
+
+  Future<void> addDiaperReminder() async {
+    final interval = int.tryParse(diaperIntervalController.text.trim());
+    if (interval == null || interval <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid interval in hours')),
+      );
+      return;
+    }
+
+    final docRef = await firestore.collection('diaper_reminders').add({
+      'caregiver': _caregiverLabel,
+      'intervalHours': interval,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    final id = _idFor(docRef.id);
+    await docRef.update({'notificationId': id});
+
+    await _scheduleReminder(
+      id: id,
+      title: "🧷 Diaper Change Time",
+      body: "$_caregiverLabel, it's time to check and change baby's diaper!",
+      intervalHours: interval,
+    );
+
+    diaperIntervalController.clear();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('🧷 Reminder set — every $interval hour(s)!')),
+    );
+  }
+
+  Future<void> addFeedingReminder() async {
+    final interval = int.tryParse(feedingIntervalController.text.trim());
+    if (interval == null || interval <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid interval in hours')),
+      );
+      return;
+    }
+
+    final docRef = await firestore.collection('feeding_reminders').add({
+      'caregiver': _caregiverLabel,
+      'intervalHours': interval,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    final id = _idFor(docRef.id);
+    await docRef.update({'notificationId': id});
+
+    await _scheduleReminder(
+      id: id,
+      title: "🍼 Feeding Time",
+      body: "$_caregiverLabel, it's time to feed baby!",
+      intervalHours: interval,
+    );
+
+    feedingIntervalController.clear();
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('🍼 Reminder set — every $interval hour(s)!')),
+    );
   }
 
   Future<void> submitWeeklyReview() async {
@@ -130,15 +269,18 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
 
   @override
   void dispose() {
+    caregiverController.dispose();
     babyNameController.dispose();
     medicineController.dispose();
     quantityController.dispose();
-    timeIntervalController.dispose();
+    medIntervalController.dispose();
+    diaperIntervalController.dispose();
+    feedingIntervalController.dispose();
     weeklyReviewController.dispose();
     checkupDateController.dispose();
     symptomsController.dispose();
     badFoodController.dispose();
-    messageController.dispose(); // NEW
+    messageController.dispose();
     super.dispose();
   }
 
@@ -151,108 +293,221 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle("💊 Current Medication", AppColors.pink),
-            _buildTextField(babyNameController, 'Baby Name'),
-            _buildTextField(medicineController, 'Medicine Name'),
-            _buildTextField(quantityController, 'Quantity to be taken'),
-            _buildTextField(timeIntervalController, 'Time Interval (e.g., every 6 hours)'),
-            _buildButton('Add Medication', addMedication, AppColors.pink),
-            const SizedBox(height: 10),
-            _buildFirestoreList('medications'),
-
-            const SizedBox(height: 30),
-            _buildSectionTitle("📝 Weekly Meal Review", AppColors.orange),
-            TextField(
-              controller: weeklyReviewController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                hintText: 'How was baby’s week in meals?',
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
+            _sectionCard(
+              color: AppColors.purple,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "🧑‍🍼", title: "Who's on Baby Duty?", color: AppColors.purple),
+                  TextField(
+                    controller: caregiverController,
+                    decoration: const InputDecoration(
+                      hintText: "Caregiver's name (e.g. Grandma, Nanny Rose)",
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Reminders will call this person out by name 👇",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            _buildButton('Submit Weekly Review', submitWeeklyReview, AppColors.orange),
-            if (weeklyReviewText != null && weeklyReviewText!.isNotEmpty)
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.comment, color: Colors.blue),
-                  title: const Text('Weekly Review'),
-                  subtitle: Text(weeklyReviewText!),
-                ),
+            const SizedBox(height: 20),
+
+            // Medication
+            _sectionCard(
+              color: AppColors.pink,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "💊", title: "Medication Reminder", color: AppColors.pink),
+                  _buildTextField(babyNameController, 'Baby Name'),
+                  _buildTextField(medicineController, 'Medicine Name'),
+                  _buildTextField(quantityController, 'Quantity (e.g. 5ml, 1 tablet)'),
+                  _buildTextField(medIntervalController, 'Repeat every how many hours?', isNumber: true),
+                  const SizedBox(height: 10),
+                  _buildButton('Set Medication Reminder', addMedication, AppColors.pink, Icons.alarm_add),
+                ],
               ),
+            ),
+            _buildFirestoreList(
+              collection: 'medications',
+              color: AppColors.pink,
+              icon: Icons.medication,
+              titleBuilder: (d) => '${d['baby']} · ${d['medicine']}',
+              subtitleBuilder: (d) => 'Qty: ${d['quantity']} · every ${d['intervalHours']}h · for ${d['caregiver']}',
+            ),
+            const SizedBox(height: 24),
 
-            const SizedBox(height: 30),
-            _buildSectionTitle("🩺 Recent Checkups", AppColors.teal),
-            _buildTextField(checkupDateController, 'Checkup Date (e.g., 2025-05-01)'),
-            _buildTextField(symptomsController, 'Signs & Symptoms'),
-            _buildTextField(badFoodController, 'Which food was not good?'),
-            _buildButton('Add Checkup Info', addCheckup, AppColors.teal),
-            const SizedBox(height: 10),
-            _buildFirestoreList('checkups'),
+            // Diaper
+            _sectionCard(
+              color: AppColors.teal,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "🧷", title: "Diaper Change Reminder", color: AppColors.teal),
+                  _buildTextField(diaperIntervalController, 'Repeat every how many hours?', isNumber: true),
+                  const SizedBox(height: 10),
+                  _buildButton('Set Diaper Reminder', addDiaperReminder, AppColors.teal, Icons.alarm_add),
+                ],
+              ),
+            ),
+            _buildFirestoreList(
+              collection: 'diaper_reminders',
+              color: AppColors.teal,
+              icon: Icons.baby_changing_station,
+              titleBuilder: (d) => 'Diaper check-in',
+              subtitleBuilder: (d) => 'Every ${d['intervalHours']}h · for ${d['caregiver']}',
+            ),
+            const SizedBox(height: 24),
 
-            const SizedBox(height: 30),
-            _buildSectionTitle("💬 Chat with Admin", AppColors.purple),
-            StreamBuilder<QuerySnapshot>(
-              stream: firestore
-                  .collection('feedback_chat')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const CircularProgressIndicator();
-                final messages = snapshot.data!.docs;
+            // Feeding
+            _sectionCard(
+              color: AppColors.orange,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "🍼", title: "Feeding Time Reminder", color: AppColors.orange),
+                  _buildTextField(feedingIntervalController, 'Repeat every how many hours?', isNumber: true),
+                  const SizedBox(height: 10),
+                  _buildButton('Set Feeding Reminder', addFeedingReminder, AppColors.orange, Icons.alarm_add),
+                ],
+              ),
+            ),
+            _buildFirestoreList(
+              collection: 'feeding_reminders',
+              color: AppColors.orange,
+              icon: Icons.restaurant,
+              titleBuilder: (d) => 'Feeding time',
+              subtitleBuilder: (d) => 'Every ${d['intervalHours']}h · for ${d['caregiver']}',
+            ),
+            const SizedBox(height: 24),
 
-                return Column(
-                  children: messages.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final isMother = data['sender'] == 'mother';
-                    final timestamp = data['timestamp'] != null
-                        ? DateFormat('MMM d, h:mm a').format(data['timestamp'].toDate())
-                        : 'Just now';
-
-                    return Align(
-                      alignment: isMother ? Alignment.centerRight : Alignment.centerLeft,
+            // Weekly review
+            _sectionCard(
+              color: AppColors.yellow,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FunSectionTitle(emoji: "📝", title: "Weekly Meal Review", color: Colors.orange.shade800),
+                  TextField(
+                    controller: weeklyReviewController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(hintText: 'How was baby’s week in meals?'),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildButton('Submit Weekly Review', submitWeeklyReview, Colors.orange.shade800, Icons.send),
+                  if (weeklyReviewText != null && weeklyReviewText!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
                       child: Card(
-                        color: isMother ? Colors.pink[100] : Colors.blue[100],
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(data['message']),
-                              const SizedBox(height: 5),
-                              Text(timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                            ],
-                          ),
+                        child: ListTile(
+                          leading: const Icon(Icons.comment, color: Colors.blue),
+                          title: const Text('Latest review'),
+                          subtitle: Text(weeklyReviewText!),
                         ),
                       ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type message...',
-                      border: OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.white,
                     ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Checkups
+            _sectionCard(
+              color: AppColors.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "🩺", title: "Recent Checkups", color: AppColors.blue),
+                  _buildTextField(checkupDateController, 'Checkup Date (e.g., 2026-05-01)'),
+                  _buildTextField(symptomsController, 'Signs & Symptoms'),
+                  _buildTextField(badFoodController, 'Which food was not good?'),
+                  const SizedBox(height: 10),
+                  _buildButton('Add Checkup Info', addCheckup, AppColors.blue, Icons.add),
+                ],
+              ),
+            ),
+            _buildFirestoreList(
+              collection: 'checkups',
+              color: AppColors.blue,
+              icon: Icons.health_and_safety,
+              titleBuilder: (d) => 'Date: ${d['date']}',
+              subtitleBuilder: (d) => 'Symptoms: ${d['symptoms']} · Food: ${d['badFood']}',
+            ),
+            const SizedBox(height: 24),
+
+            // Chat
+            _sectionCard(
+              color: AppColors.purple,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "💬", title: "Chat with Admin", color: AppColors.purple),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: firestore
+                        .collection('feedback_chat')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const CircularProgressIndicator();
+                      final messages = snapshot.data!.docs;
+
+                      return Column(
+                        children: messages.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final isMother = data['sender'] == 'mother';
+                          final timestamp = data['timestamp'] != null
+                              ? DateFormat('MMM d, h:mm a').format(data['timestamp'].toDate())
+                              : 'Just now';
+
+                          return Align(
+                            alignment: isMother ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isMother ? AppColors.pink.withOpacity(0.15) : AppColors.blue.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(data['message']),
+                                  const SizedBox(height: 5),
+                                  Text(timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-                  onPressed: sendMessageToAdmin,
-                  child: const Icon(Icons.send, color: Colors.white),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: messageController,
+                          decoration: const InputDecoration(hintText: 'Type message...'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      CircleAvatar(
+                        backgroundColor: AppColors.purple,
+                        child: IconButton(
+                          onPressed: sendMessageToAdmin,
+                          icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -260,71 +515,98 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     );
   }
 
-  Widget _buildFirestoreList(String collection) {
+  Widget _sectionCard({required Widget child, required Color color}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border(left: BorderSide(color: color, width: 5)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildFirestoreList({
+    required String collection,
+    required Color color,
+    required IconData icon,
+    required String Function(Map<String, dynamic>) titleBuilder,
+    required String Function(Map<String, dynamic>) subtitleBuilder,
+  }) {
     return StreamBuilder<QuerySnapshot>(
       stream: firestore.collection(collection).orderBy('timestamp', descending: true).snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const CircularProgressIndicator();
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const SizedBox.shrink();
 
-        return Column(
-          children: docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            if (collection == 'medications') {
-              return Card(
+        return Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Column(
+            children: docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final isReminder = collection == 'medications' ||
+                  collection == 'diaper_reminders' ||
+                  collection == 'feeding_reminders';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                  ],
+                ),
                 child: ListTile(
-                  title: Text('${data['baby']} - ${data['medicine']}'),
-                  subtitle: Text('Qty: ${data['quantity']}, Every ${data['interval']}'),
-                  leading: const Icon(Icons.medication, color: Colors.pink),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  leading: CircleAvatar(backgroundColor: color.withOpacity(0.15), child: Icon(icon, color: color)),
+                  title: Text(titleBuilder(data), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(subtitleBuilder(data)),
+                  trailing: isReminder
+                      ? IconButton(
+                          icon: const Icon(Icons.close, color: Colors.redAccent),
+                          tooltip: 'Cancel reminder',
+                          onPressed: () => _cancelReminder(collection, doc.id, data['notificationId'] as int?),
+                        )
+                      : null,
                 ),
               );
-            } else if (collection == 'checkups') {
-              return Card(
-                child: ListTile(
-                  title: Text('Date: ${data['date']}'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Symptoms: ${data['symptoms']}'),
-                      Text('Bad Food: ${data['badFood']}'),
-                    ],
-                  ),
-                  leading: const Icon(Icons.health_and_safety, color: Colors.green),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }).toList(),
+            }).toList(),
+          ),
         );
       },
     );
   }
 
-  Widget _buildSectionTitle(String title, [Color color = AppColors.pink]) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(title,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String hint) {
+  Widget _buildTextField(TextEditingController controller, String hint, {bool isNumber = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: TextField(
         controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(hintText: hint),
       ),
     );
   }
 
-  Widget _buildButton(String text, VoidCallback onPressed, [Color color = AppColors.pink]) {
+  Widget _buildButton(String text, VoidCallback onPressed, Color color, [IconData? icon]) {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
+      child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.all(15)),
         onPressed: onPressed,
-        child: Text(text, style: const TextStyle(color: Colors.white)),
+        icon: Icon(icon ?? Icons.check, color: Colors.white, size: 18),
+        label: Text(text, style: const TextStyle(color: Colors.white)),
       ),
     );
   }
