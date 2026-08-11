@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import './db_helper.dart';
 import './login_screen.dart';
+import 'auth_widgets.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -10,33 +10,111 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
+  bool _isAdminKeyVisible = false;
+  bool _isLoading = false;
+  bool _registerAsAdmin = false;
+
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _adminKeyController = TextEditingController();
+
+  static const String _secretAdminKey = 'ADMIN123';
+
+  final RegExp _emailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
   bool _isPasswordValid(String password) {
     return password.length >= 6 &&
-           password.contains(RegExp(r'[A-Z]')) &&
-           password.contains(RegExp(r'[a-z]')) &&
-           password.contains(RegExp(r'[0-9]'));
+        password.contains(RegExp(r'[A-Z]')) &&
+        password.contains(RegExp(r'[a-z]')) &&
+        password.contains(RegExp(r'[0-9]'));
   }
 
-  Widget babyNourishLogo() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        Icon(Icons.child_care, color: Colors.lightBlue, size: 36),
-        SizedBox(width: 10),
-        Text(
-          "BABY_NOURISH",
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Colors.lightBlue,
-            fontFamily: "ComicSans",
-          ),
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_registerAsAdmin && _adminKeyController.text.trim() != _secretAdminKey) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid Admin Key"),
+          backgroundColor: Colors.redAccent,
         ),
-      ],
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_registerAsAdmin) {
+        await DBHelper.insertAdmin(
+          username: _usernameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          admin: 'admin',
+        );
+      } else {
+        await DBHelper.insertUser(
+          username: _usernameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          parent: 'parent',
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registration successful! Please login.")),
+      );
+
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Registration failed: ${e.toString()}")),
+      );
+    }
+  }
+
+  Widget _buildRoleToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _RoleOption(
+              label: "Parent",
+              icon: Icons.person_outline,
+              selected: !_registerAsAdmin,
+              onTap: () => setState(() => _registerAsAdmin = false),
+            ),
+          ),
+          Expanded(
+            child: _RoleOption(
+              label: "Admin",
+              icon: Icons.admin_panel_settings_outlined,
+              selected: _registerAsAdmin,
+              onTap: () => setState(() => _registerAsAdmin = true),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -44,100 +122,187 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.pink[50],
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              babyNourishLogo(),
-              SizedBox(height: 30),
-              Center(
-                child: Column(
-                  children: [
-                    Text("Register", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-                    SizedBox(height: 20),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        labelText: "Username",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: "Email",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        border: OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordVisible = !_isPasswordVisible;
-                            });
+      body: SafeArea(
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const AuthHeader(
+                  title: "Create Account",
+                  subtitle:
+                      "Join Baby Nourish to track growth, meals, and health in one place.",
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildRoleToggle(),
+                        const SizedBox(height: 16),
+                        AuthTextField(
+                          controller: _usernameController,
+                          label: "Username",
+                          icon: Icons.person_outline,
+                          validator: (value) => value == null || value.isEmpty
+                              ? "Please enter a username"
+                              : null,
+                        ),
+                        AuthTextField(
+                          controller: _emailController,
+                          label: "Email",
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter your email";
+                            } else if (!_emailRegex.hasMatch(value)) {
+                              return "Invalid email format";
+                            }
+                            return null;
                           },
                         ),
-                      ),
+                        AuthTextField(
+                          controller: _passwordController,
+                          label: "Password",
+                          icon: Icons.lock_outline,
+                          obscureText: !_isPasswordVisible,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Please enter a password";
+                            } else if (!_isPasswordValid(value)) {
+                              return "Must contain an uppercase, lowercase letter, and a number (6+ chars)";
+                            }
+                            return null;
+                          },
+                        ),
+                        if (_registerAsAdmin)
+                          AuthTextField(
+                            controller: _adminKeyController,
+                            label: "Admin Key",
+                            icon: Icons.vpn_key_outlined,
+                            obscureText: !_isAdminKeyVisible,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isAdminKeyVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isAdminKeyVisible = !_isAdminKeyVisible;
+                                });
+                              },
+                            ),
+                            validator: (value) {
+                              if (_registerAsAdmin &&
+                                  (value == null || value.isEmpty)) {
+                                return "Enter the admin key";
+                              }
+                              return null;
+                            },
+                          ),
+                        const SizedBox(height: 24),
+                        _isLoading
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : AuthButton(
+                                label: _registerAsAdmin
+                                    ? "Register as Admin"
+                                    : "Register",
+                                onPressed: _register,
+                              ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => LoginScreen()),
+                              );
+                            },
+                            child: const Text(
+                              "Already have an account? Login here",
+                              style: TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        String password = _passwordController.text.trim();
-                        if (!_isPasswordValid(password)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Password must contain at least one uppercase letter, one lowercase letter, and one number")),
-                          );
-                          return;
-                        }
-
-                        // Insert the user with the role set to 'user'
-                        await DBHelper.insertUser(
-                          username: _usernameController.text.trim(),
-                          email: _emailController.text.trim(),
-                          password: _passwordController.text.trim(),
-                          parent: 'parent', // Setting the role as 'user'
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Registration successful! Please login.")),
-                        );
-
-                        // ✅ Navigate to LoginScreen after a brief delay
-                        Future.delayed(Duration(seconds: 1), () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => LoginScreen()),
-                          );
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                      ),
-                      child: Text("Register", style: TextStyle(color: Colors.white)),
-                    ),
-                    SizedBox(height: 20),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text("Already have an account? Login here", style: TextStyle(color: Colors.blueAccent)),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RoleOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? Colors.blueAccent : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: selected ? Colors.white : Colors.blueGrey),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.blueGrey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

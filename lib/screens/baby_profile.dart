@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import './db_helper.dart';
 import './meal_plan.dart';
 import 'growth_status.dart';
@@ -18,7 +17,7 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
   final TextEditingController _heightController = TextEditingController();
 
   List<Map<String, dynamic>> _babyProfiles = [];
-  int? _selectedProfileId;
+  String? _selectedProfileId;
 
   @override
   void initState() {
@@ -78,7 +77,7 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     }
   }
 
-  Future<void> _deleteProfile(int id) async {
+  Future<void> _deleteProfile(String id) async {
     try {
       await DBHelper.deleteBabyProfile(id);
       await _fetchProfiles();

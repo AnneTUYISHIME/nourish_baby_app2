@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'baby_profile.dart';
-import 'health_tracker.dart';
+import 'Health_tracker.dart';
 import 'growth_status.dart';
 import 'meal_plan.dart';
 import 'notifications_screen.dart'; // NEW
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => GrowthStatusScreen(
-          babyId: 1,
+          babyId: "1",
           name: "",
           age: 0,
           weight: 0,

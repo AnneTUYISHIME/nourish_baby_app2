@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GrowthStatusScreen extends StatefulWidget {
-  final int babyId;
+  final String babyId;
   final String name;
   final int age;
   final double weight;
@@ -84,7 +84,7 @@ class _GrowthStatusScreenState extends State<GrowthStatusScreen> {
     try {
       final docRef = FirebaseFirestore.instance
           .collection("growth_status")
-          .doc(widget.babyId.toString());
+          .doc(widget.babyId);
 
       final docSnapshot = await docRef.get();
 

@@ -52,7 +52,7 @@ class _BabyProfilesScreenState extends State<BabyProfilesScreen> {
     }
   }
 
-  void deleteProfile(int id) async {
+  void deleteProfile(String id) async {
     bool confirmed = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

@@ -48,7 +48,7 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
   }
 
   // Delete parent
-  Future<void> _deleteParent(int id) async {
+  Future<void> _deleteParent(String id) async {
     await DBHelper.deleteParent(id);
     _loadParents();
   }
@@ -175,13 +175,13 @@ class _ManageParentsScreenState extends State<ManageParentsScreen> {
   }
 
   // Update last active time when a parent is interacted with
-  void _updateLastActive(int id) async {
+  void _updateLastActive(String id) async {
     await DBHelper.updateLastActive(id);
     _loadParents(); // Reload the list to reflect the updated last active time
   }
 
   // Fetch the baby name associated with the parent
-  Future<String> _getBabyNameForParent(int parentId) async {
+  Future<String> _getBabyNameForParent(String parentId) async {
     final babyProfiles = await DBHelper.getBabyProfiles();
     final parentProfile = _parents.firstWhere(
       (parent) => parent['id'] == parentId,
