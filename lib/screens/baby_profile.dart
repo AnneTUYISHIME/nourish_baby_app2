@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import './db_helper.dart';
 import './meal_plan.dart';
 import 'growth_status.dart';
 import '../theme/app_theme.dart';
+import '../user_model.dart';
 
 class BabyProfileScreen extends StatefulWidget {
   const BabyProfileScreen({super.key});
@@ -40,7 +42,8 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     final height = double.tryParse(_heightController.text) ?? 0.0;
 
     try {
-      await DBHelper.insertBabyProfile(name, age, weight, height);
+      final parentId = Provider.of<UserModel>(context, listen: false).id;
+      await DBHelper.insertBabyProfile(name, age, weight, height, parentId: parentId);
       await _fetchProfiles();
       _clearInputs();
       ScaffoldMessenger.of(context).showSnackBar(

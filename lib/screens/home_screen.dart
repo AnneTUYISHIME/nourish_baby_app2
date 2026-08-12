@@ -6,6 +6,8 @@ import 'growth_status.dart';
 import 'meal_plan.dart';
 import 'notifications_screen.dart';
 import 'more_tips.dart';
+import 'admin_chat_screen.dart';
+import 'settings_screen.dart';
 import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -127,6 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
             onSelected: (value) {
               if (value == 'logout') {
                 _logout(context);
+              } else if (value == 'settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -209,6 +216,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: "Notifications",
                     subtitle: "${notifications.length} new",
                     onTap: () => _goToNotifications(context),
+                  ),
+                  FunCard(
+                    icon: Icons.chat_bubble_outline,
+                    color: AppColors.blue,
+                    title: "Chat with Admin",
+                    subtitle: "Ask a question",
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminChatScreen()),
+                    ),
                   ),
                 ],
               ),

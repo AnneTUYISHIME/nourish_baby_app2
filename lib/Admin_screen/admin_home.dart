@@ -8,6 +8,7 @@ import 'Admin_healthTracker.dart';
 import 'growth_status.dart';
 import '../screens/feedback_screen.dart';
 import '../screens/more_tips.dart';
+import '../screens/settings_screen.dart';
 import '../theme/app_theme.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -154,7 +155,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 );
               },
             ),
-            _buildDrawerItem(context, Icons.settings, "Settings"),
+            _buildDrawerItem(
+              context,
+              Icons.settings,
+              "Settings",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
+            ),
             const Divider(),
             _buildDrawerItem(
               context,

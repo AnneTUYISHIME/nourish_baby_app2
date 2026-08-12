@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
+import 'admin_chat_screen.dart';
 
 class HealthTrackerScreen extends StatefulWidget {
   const HealthTrackerScreen({super.key});
@@ -23,16 +23,12 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   final TextEditingController diaperIntervalController = TextEditingController();
   final TextEditingController feedingIntervalController = TextEditingController();
 
-  final TextEditingController weeklyReviewController = TextEditingController();
   final TextEditingController checkupDateController = TextEditingController();
   final TextEditingController symptomsController = TextEditingController();
   final TextEditingController badFoodController = TextEditingController();
-  final TextEditingController messageController = TextEditingController();
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
-
-  String? weeklyReviewText;
 
   @override
   void initState() {
@@ -214,21 +210,6 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     );
   }
 
-  Future<void> submitWeeklyReview() async {
-    final text = weeklyReviewController.text.trim();
-    if (text.isNotEmpty) {
-      await firestore.collection('weekly_reviews').add({
-        'review': text,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      setState(() {
-        weeklyReviewText = text;
-        weeklyReviewController.clear();
-      });
-    }
-  }
-
   Future<void> addCheckup() async {
     if (checkupDateController.text.isNotEmpty &&
         symptomsController.text.isNotEmpty &&
@@ -248,25 +229,6 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     }
   }
 
-  Future<void> sendMessageToAdmin() async {
-    final message = messageController.text.trim();
-    if (message.isNotEmpty) {
-      await firestore.collection('feedback_chat').add({
-        'sender': 'mother',
-        'message': message,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      setState(() {
-        messageController.clear();
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Message sent to admin')),
-      );
-    }
-  }
-
   @override
   void dispose() {
     caregiverController.dispose();
@@ -276,11 +238,9 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     medIntervalController.dispose();
     diaperIntervalController.dispose();
     feedingIntervalController.dispose();
-    weeklyReviewController.dispose();
     checkupDateController.dispose();
     symptomsController.dispose();
     badFoodController.dispose();
-    messageController.dispose();
     super.dispose();
   }
 
@@ -386,36 +346,6 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Weekly review
-            _sectionCard(
-              color: AppColors.yellow,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FunSectionTitle(emoji: "📝", title: "Weekly Meal Review", color: Colors.orange.shade800),
-                  TextField(
-                    controller: weeklyReviewController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(hintText: 'How was baby’s week in meals?'),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildButton('Submit Weekly Review', submitWeeklyReview, Colors.orange.shade800, Icons.send),
-                  if (weeklyReviewText != null && weeklyReviewText!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.comment, color: Colors.blue),
-                          title: const Text('Latest review'),
-                          subtitle: Text(weeklyReviewText!),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
             // Checkups
             _sectionCard(
               color: AppColors.blue,
@@ -440,73 +370,44 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Chat
-            _sectionCard(
-              color: AppColors.purple,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const FunSectionTitle(emoji: "💬", title: "Chat with Admin", color: AppColors.purple),
-                  StreamBuilder<QuerySnapshot>(
-                    stream: firestore
-                        .collection('feedback_chat')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const CircularProgressIndicator();
-                      final messages = snapshot.data!.docs;
-
-                      return Column(
-                        children: messages.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final isMother = data['sender'] == 'mother';
-                          final timestamp = data['timestamp'] != null
-                              ? DateFormat('MMM d, h:mm a').format(data['timestamp'].toDate())
-                              : 'Just now';
-
-                          return Align(
-                            alignment: isMother ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: isMother ? AppColors.pink.withOpacity(0.15) : AppColors.blue.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(data['message']),
-                                  const SizedBox(height: 5),
-                                  Text(timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
+            // Chat entry point — full chat lives on its own screen now
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              elevation: 3,
+              shadowColor: Colors.black.withOpacity(0.08),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminChatScreen()),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: messageController,
-                          decoration: const InputDecoration(hintText: 'Type message...'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
                       CircleAvatar(
-                        backgroundColor: AppColors.purple,
-                        child: IconButton(
-                          onPressed: sendMessageToAdmin,
-                          icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                        backgroundColor: AppColors.purple.withOpacity(0.15),
+                        child: const Icon(Icons.chat_bubble_outline, color: AppColors.purple),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Chat with Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            SizedBox(height: 2),
+                            Text("Questions or concerns? Message your care team directly.",
+                                style: TextStyle(fontSize: 12, color: Colors.black54)),
+                          ],
                         ),
                       ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ],

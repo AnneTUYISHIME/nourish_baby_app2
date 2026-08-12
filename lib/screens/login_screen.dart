@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'home_screen.dart';
 import 'db_helper.dart';
 import 'register_screen.dart';
 import 'auth_widgets.dart';
+import '../user_model.dart';
 import '../Admin_screen/admin_home.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -52,6 +54,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (user != null) {
       String userType = user['user_type'] ?? 'user';
+
+      Provider.of<UserModel>(context, listen: false).login(
+        user['username'] ?? username,
+        user['email'] ?? email,
+        id: user['id'],
+        createdAt: user['createdAt'],
+      );
 
       if (userType == 'admin') {
         Navigator.pushReplacement(

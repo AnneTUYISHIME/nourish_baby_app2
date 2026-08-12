@@ -58,6 +58,7 @@ class DBHelper {
       'password': _hashPassword(password),
       'user_type': admin,
       'last_active': DateTime.now().toIso8601String(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -73,7 +74,31 @@ class DBHelper {
       'password': _hashPassword(password),
       'user_type': parent,
       'last_active': DateTime.now().toIso8601String(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Verifies [oldPassword] against the stored hash for [userId] and, if it
+  /// matches, updates the password to [newPassword]. Returns false if the
+  /// old password doesn't match (so the UI can show a clear error).
+  static Future<bool> changePassword(
+    String userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
+    final doc = await _users.doc(userId).get();
+    if (!doc.exists) return false;
+    final data = doc.data() as Map<String, dynamic>;
+    if (data['password'] != _hashPassword(oldPassword)) return false;
+
+    await _users.doc(userId).update({'password': _hashPassword(newPassword)});
+    return true;
+  }
+
+  static Future<Map<String, dynamic>?> getUserById(String id) async {
+    final doc = await _users.doc(id).get();
+    if (!doc.exists) return null;
+    return _withId(doc);
   }
 
   // ---------------- Baby profiles (parent-facing) ----------------
@@ -82,18 +107,31 @@ class DBHelper {
     String name,
     int age,
     double weight,
-    double height,
-  ) async {
+    double height, {
+    String? parentId,
+  }) async {
     await _babyProfiles.add({
       'name': name,
       'age': age,
       'weight': weight,
       'height': height,
+      if (parentId != null) 'parent_id': parentId,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
   static Future<List<Map<String, dynamic>>> getBabyProfiles() async {
     final snapshot = await _babyProfiles.get();
+    return snapshot.docs.map(_withId).toList();
+  }
+
+  /// Baby profiles belonging to a specific parent — used for the parent's
+  /// own "My Babies" report in Settings, so one parent doesn't see stats
+  /// from another parent's baby.
+  static Future<List<Map<String, dynamic>>> getBabyProfilesForParent(
+      String parentId) async {
+    final snapshot =
+        await _babyProfiles.where('parent_id', isEqualTo: parentId).get();
     return snapshot.docs.map(_withId).toList();
   }
 
