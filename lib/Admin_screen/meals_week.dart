@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
 class ManageMealsScreen extends StatefulWidget {
@@ -27,7 +26,7 @@ class _ManageMealsScreenState extends State<ManageMealsScreen> {
   TextEditingController mealController = TextEditingController();
   String selectedMealType = "Breakfast";
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final _notifications = NotificationService.instance.plugin;
   bool _reminderEnabled = false;
 
   @override
@@ -38,19 +37,7 @@ class _ManageMealsScreenState extends State<ManageMealsScreen> {
   }
 
   Future<void> _initNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    await _notifications.initialize(
-      const InitializationSettings(android: androidSettings, iOS: iosSettings),
-    );
-    await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-    tz.initializeTimeZones();
+    await NotificationService.instance.init();
 
     final pending = await _notifications.pendingNotificationRequests();
     if (mounted) {
@@ -60,38 +47,33 @@ class _ManageMealsScreenState extends State<ManageMealsScreen> {
     }
   }
 
-  tz.TZDateTime _nextSunday6pm() {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 18);
-    while (scheduled.weekday != DateTime.sunday || scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
-    return scheduled;
-  }
-
   Future<void> _toggleSundayReminder(bool enable) async {
     if (enable) {
-      await _notifications.zonedSchedule(
-        _sundayReminderId,
-        "🍽️ Plan Next Week's Meals",
-        "It's Sunday! Add fresh meals for the coming week to keep things varied.",
-        _nextSunday6pm(),
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'meal_planning_channel',
-            'Meal Planning Reminders',
-            channelDescription: 'Weekly Sunday reminder to plan next week\'s meals',
-            importance: Importance.max,
-            priority: Priority.high,
+      try {
+        await _notifications.zonedSchedule(
+          _sundayReminderId,
+          "🍽️ Plan Next Week's Meals",
+          "It's Sunday! Add fresh meals for the coming week to keep things varied.",
+          NotificationService.instance.asTz(
+            NotificationService.instance.nextWeekdayTime(DateTime.sunday, 18),
           ),
-          iOS: DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("🔔 You'll be reminded every Sunday to plan next week!")),
-      );
+          NotificationService.mealPlanningDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("🔔 You'll be reminded every Sunday to plan next week!")),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not schedule reminder: $e')),
+          );
+        }
+        return;
+      }
     } else {
       await _notifications.cancel(_sundayReminderId);
     }

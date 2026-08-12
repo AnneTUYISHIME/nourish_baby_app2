@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'admin_chat_screen.dart';
 
@@ -28,7 +29,10 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   final TextEditingController badFoodController = TextEditingController();
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final _notifications = NotificationService.instance.plugin;
+
+  bool? _notificationsEnabled;
+  bool _sendingTest = false;
 
   @override
   void initState() {
@@ -38,18 +42,29 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
   }
 
   Future<void> _initNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    await _notifications.initialize(
-      const InitializationSettings(android: androidSettings, iOS: iosSettings),
-    );
-    await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    await NotificationService.instance.init();
+    final enabled = await NotificationService.instance.areNotificationsEnabled();
+    if (mounted) setState(() => _notificationsEnabled = enabled);
+  }
+
+  Future<void> _sendTestNotification() async {
+    setState(() => _sendingTest = true);
+    try {
+      await NotificationService.instance.showTestNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('🔔 Sent! Check your notification shade.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not send notification: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sendingTest = false);
+    }
   }
 
   Future<void> _saveFCMToken() async {
@@ -73,23 +88,22 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
     required String body,
     required int intervalHours,
   }) async {
-    await _notifications.periodicallyShowWithDuration(
-      id,
-      title,
-      body,
-      Duration(hours: intervalHours),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'care_reminders_channel',
-          'Baby Care Reminders',
-          channelDescription: 'Medication, diaper, and feeding reminders',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
+    try {
+      await _notifications.periodicallyShowWithDuration(
+        id,
+        title,
+        body,
+        Duration(hours: intervalHours),
+        NotificationService.careDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reminder saved, but scheduling failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _cancelReminder(String collection, String docId, int? notificationId) async {
@@ -271,6 +285,55 @@ class _HealthTrackerScreenState extends State<HealthTrackerScreen> {
                   Text(
                     "Reminders will call this person out by name 👇",
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Notification test/status
+            _sectionCard(
+              color: AppColors.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const FunSectionTitle(emoji: "🔔", title: "Notifications", color: AppColors.blue),
+                  if (_notificationsEnabled == false) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "⚠️ Notifications are turned off for this app. Reminders below won't show until you allow them in your phone's Settings > Apps > Nourish Baby App > Notifications.",
+                        style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ] else if (_notificationsEnabled == true) ...[
+                    Text(
+                      "Notifications are enabled ✅ — tap below to see one right now.",
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 10),
+                  ] else ...[
+                    Text(
+                      "Send a test notification to make sure alerts show up on this device.",
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _sendingTest ? null : _sendTestNotification,
+                      icon: _sendingTest
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                      label: const Text('Send Test Notification', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue, padding: const EdgeInsets.all(15)),
+                    ),
                   ),
                 ],
               ),

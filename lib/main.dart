@@ -9,12 +9,18 @@ import 'user_model.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Ask for notification permission up front, at app launch, instead of
+  // waiting for the user to visit a specific screen — otherwise reminders
+  // set from a screen the user opens first (e.g. Meal Plan) could silently
+  // never fire because permission was never requested.
+  await NotificationService.instance.init();
   runApp(MyApp());
 }
 

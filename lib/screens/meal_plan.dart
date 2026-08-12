@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../user_model.dart';
 import 'more_tips.dart';
@@ -20,8 +19,7 @@ class MealPlanScreen extends StatefulWidget {
 }
 
 class _MealPlanScreenState extends State<MealPlanScreen> {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final flutterLocalNotificationsPlugin = NotificationService.instance.plugin;
   Map<String, List<Map<String, dynamic>>> weeklyMeals = {};
   String selectedWeek = "Week 1";
 
@@ -67,51 +65,23 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   }
 
   Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings initializationSettingsDarwin =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-    );
-
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-    tz.initializeTimeZones();
+    await NotificationService.instance.init();
   }
 
   Future<void> _scheduleFeedingReminder() async {
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      0,
-      'Feeding Time 🍽️',
-      "Time to feed ${widget.babyName}!",
-      _nextInstanceOfFeedingTime(),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'meal_plan_channel',
-          'Meal Plan Notifications',
-          channelDescription: 'Reminders for baby feeding times',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
-  }
-
-  tz.TZDateTime _nextInstanceOfFeedingTime() {
-    final now = tz.TZDateTime.now(tz.local);
-    final scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10);
-    return scheduled.isBefore(now) ? scheduled.add(Duration(days: 1)) : scheduled;
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        0,
+        'Feeding Time 🍽️',
+        "Time to feed ${widget.babyName}!",
+        NotificationService.instance.asTz(NotificationService.instance.nextDailyTime(10)),
+        NotificationService.mealPlanDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('Could not schedule feeding reminder: $e');
+    }
   }
 
   Future<void> _fetchMeals() async {
@@ -156,23 +126,30 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     final text = _weeklyReviewController.text.trim();
     if (text.isEmpty) return;
 
-    final parentName = Provider.of<UserModel>(context, listen: false).username ?? 'A parent';
+    final userModel = Provider.of<UserModel>(context, listen: false);
+    final parentName = userModel.username ?? 'A parent';
 
     // Saved as its own record so admin can see every baby's review history...
     await FirebaseFirestore.instance.collection('weekly_reviews').add({
       'review': text,
       'babyName': widget.babyName,
       'parentName': parentName,
+      'parentId': userModel.id,
       'timestamp': FieldValue.serverTimestamp(),
     });
 
-    // ...and also dropped into the shared chat so it's visible right where
-    // the parent and admin already talk, not buried in a separate tab.
-    await FirebaseFirestore.instance.collection('feedback_chat').add({
-      'sender': 'mother',
-      'message': '📝 Weekly meal review for ${widget.babyName}: $text',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    // ...and also dropped into that parent's chat thread so it's visible
+    // right where the parent and admin already talk, not buried in a
+    // separate tab.
+    if (userModel.id != null) {
+      await FirebaseFirestore.instance.collection('feedback_chat').add({
+        'sender': 'mother',
+        'message': '📝 Weekly meal review for ${widget.babyName}: $text',
+        'parentId': userModel.id,
+        'parentName': parentName,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
 
     setState(() {
       _latestReview = text;

@@ -1,46 +1,36 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../user_model.dart';
 
-/// A dedicated full-screen chat with the admin/care team — pulled out of
-/// Health Tracker so that screen stays focused on medication/diaper/feeding
-/// reminders and checkups, instead of being crowded with everything at once.
-///
-/// Messages are tagged with the logged-in parent's id, so each parent only
-/// ever sees their own conversation with the admin team, not everyone
-/// else's messages mixed together.
-class AdminChatScreen extends StatefulWidget {
-  const AdminChatScreen({super.key});
+/// Lets an admin chat directly with one specific parent, so a feedback
+/// message or concern can actually be resolved back-and-forth instead of
+/// just being read. Mirrors the parent-facing AdminChatScreen, but scoped
+/// to [parentId] and sending as 'admin'.
+class AdminParentChatScreen extends StatefulWidget {
+  final String parentId;
+  final String parentName;
+
+  const AdminParentChatScreen({super.key, required this.parentId, required this.parentName});
 
   @override
-  State<AdminChatScreen> createState() => _AdminChatScreenState();
+  State<AdminParentChatScreen> createState() => _AdminParentChatScreenState();
 }
 
-class _AdminChatScreenState extends State<AdminChatScreen> {
+class _AdminParentChatScreenState extends State<AdminParentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ScrollController _scrollController = ScrollController();
 
-  Future<void> _sendMessage(UserModel user) async {
+  Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    if (user.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log out and back in to chat')),
-      );
-      return;
-    }
-
     _messageController.clear();
     await _firestore.collection('feedback_chat').add({
-      'sender': 'mother',
+      'sender': 'admin',
       'message': message,
-      'parentId': user.id,
-      'parentName': user.username ?? 'Parent',
+      'parentId': widget.parentId,
+      'parentName': widget.parentName,
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
@@ -48,45 +38,24 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   @override
   void dispose() {
     _messageController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserModel>();
-
-    if (user.id == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("💬 Chat with Admin")),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              "Please log out and back in to start a conversation with the admin team.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: const Text("💬 Chat with Admin"),
-      ),
+      appBar: AppBar(title: Text("💬 ${widget.parentName}")),
       body: Column(
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Filtered by parentId only (no orderBy) so this doesn't need
-              // a Firestore composite index — sorted by timestamp in Dart
-              // below instead.
+              // No orderBy here on purpose — combining it with the where()
+              // below would require a Firestore composite index. Sorted in
+              // Dart instead.
               stream: _firestore
                   .collection('feedback_chat')
-                  .where('parentId', isEqualTo: user.id)
+                  .where('parentId', isEqualTo: widget.parentId)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -97,22 +66,12 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                     final ta = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
                     final tb = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
                     if (ta == null || tb == null) return 0;
-                    return tb.compareTo(ta); // descending, newest first
+                    return tb.compareTo(ta);
                   });
 
                 if (messages.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text("💬", style: TextStyle(fontSize: 48)),
-                        const SizedBox(height: 12),
-                        Text(
-                          "No messages yet. Say hello to the admin team!",
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
+                    child: Text("No messages yet.", style: TextStyle(color: Colors.grey[600])),
                   );
                 }
 
@@ -122,24 +81,24 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final data = messages[index].data() as Map<String, dynamic>;
-                    final isMother = data['sender'] == 'mother';
+                    final isAdmin = data['sender'] == 'admin';
                     final timestamp = data['timestamp'] != null
                         ? DateFormat('MMM d, h:mm a').format((data['timestamp'] as Timestamp).toDate())
                         : 'Just now';
 
                     return Align(
-                      alignment: isMother ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                         margin: const EdgeInsets.symmetric(vertical: 5),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isMother ? AppColors.pink : Colors.white,
+                          color: isAdmin ? AppColors.blue : Colors.white,
                           borderRadius: BorderRadius.only(
                             topLeft: const Radius.circular(16),
                             topRight: const Radius.circular(16),
-                            bottomLeft: Radius.circular(isMother ? 16 : 4),
-                            bottomRight: Radius.circular(isMother ? 4 : 16),
+                            bottomLeft: Radius.circular(isAdmin ? 16 : 4),
+                            bottomRight: Radius.circular(isAdmin ? 4 : 16),
                           ),
                           boxShadow: [
                             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2)),
@@ -148,24 +107,24 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (!isMother)
-                              const Padding(
-                                padding: EdgeInsets.only(bottom: 3),
+                            if (!isAdmin)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
                                 child: Text(
-                                  "Admin",
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.blue),
+                                  widget.parentName,
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.pink),
                                 ),
                               ),
                             Text(
                               data['message'] ?? '',
-                              style: TextStyle(color: isMother ? Colors.white : Colors.black87, fontSize: 14.5),
+                              style: TextStyle(color: isAdmin ? Colors.white : Colors.black87, fontSize: 14.5),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               timestamp,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isMother ? Colors.white.withOpacity(0.8) : Colors.grey,
+                                color: isAdmin ? Colors.white.withOpacity(0.8) : Colors.grey,
                               ),
                             ),
                           ],
@@ -186,16 +145,16 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
-                      decoration: const InputDecoration(hintText: 'Type a message...'),
-                      onSubmitted: (_) => _sendMessage(user),
+                      decoration: InputDecoration(hintText: 'Reply to ${widget.parentName}...'),
+                      onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
                   const SizedBox(width: 10),
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: AppColors.pink,
+                    backgroundColor: AppColors.blue,
                     child: IconButton(
-                      onPressed: () => _sendMessage(user),
+                      onPressed: _sendMessage,
                       icon: const Icon(Icons.send, color: Colors.white, size: 18),
                     ),
                   ),

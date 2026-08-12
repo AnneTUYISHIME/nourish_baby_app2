@@ -146,8 +146,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             _buildDrawerItem(
               context,
-              Icons.feedback,
-              "Feedback",
+              Icons.chat_bubble_outline,
+              "Parent Messages",
               onTap: () {
                 Navigator.push(
                   context,
@@ -265,9 +265,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     },
                   ),
                   FunCard(
-                    icon: Icons.feedback,
+                    icon: Icons.chat_bubble_outline,
                     color: AppColors.yellow,
-                    title: "Feedback Reports",
+                    title: "Parent Messages",
+                    subtitle: "Chat directly",
                     onTap: () {
                       Navigator.push(
                         context,
