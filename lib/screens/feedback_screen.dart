@@ -105,19 +105,17 @@ class FeedbackScreen extends StatelessWidget {
                       FunPill(label: "${messages.length} msg${messages.length == 1 ? '' : 's'}", color: color),
                     ],
                   ),
-                  onTap: parentId == 'unknown'
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AdminParentChatScreen(
-                                parentId: parentId,
-                                parentName: parentName,
-                              ),
-                            ),
-                          );
-                        },
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminParentChatScreen(
+                          parentId: parentId,
+                          parentName: parentName,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               );
             },

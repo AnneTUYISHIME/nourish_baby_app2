@@ -1,56 +1,84 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/tips_seed.dart';
 import '../theme/app_theme.dart';
 
-class MoreTipsScreen extends StatelessWidget {
+/// Parent-facing tips screen. Reads live from Firestore so whatever the
+/// admin adds, edits, or removes in Manage Tips shows up here right away —
+/// nothing hardcoded anymore.
+class MoreTipsScreen extends StatefulWidget {
   const MoreTipsScreen({super.key});
 
-  static const _underSix = [
-    ("🍼 Breastfeed Frequently",
-        "Breastfeed your baby every 2–3 hours to ensure proper nutrition and bonding."),
-    ("🧷 Change Diapers Regularly",
-        "Change your baby’s diapers every 1–2 hours to keep their skin healthy."),
-    ("🧴 Monitor Skin for Allergies",
-        "Check for any skin reactions, especially when using oils or new clothing."),
-    ("🧹 Keep Baby’s Room Clean",
-        "Regularly clean and sanitize your baby’s room and toys to prevent infections."),
-    ("😴 Get Enough Rest (For Mom)",
-        "Rest whenever the baby sleeps. A well-rested mom can care better."),
-    ("🎶 Bond with Baby",
-        "Smile at your baby, sing lullabies, and talk during breastfeeding for emotional growth."),
-    ("🏃‍♀️ Gentle Exercises",
-        "Do light exercises or stretching to stay healthy and energized."),
-    ("🍼 Exclusive Breastfeeding",
-        "Avoid mixing food. Exclusively breastfeed up to 6 months before introducing solids."),
-  ];
+  @override
+  State<MoreTipsScreen> createState() => _MoreTipsScreenState();
+}
 
-  static const _overSix = [
-    ("🍼 When to Introduce Solids",
-        "Begin around 6 months. Start with soft pureed veggies like pumpkin, sweet potatoes, and carrots."),
-    ("🚫 Foods to Avoid",
-        "Avoid honey (risk of botulism), whole nuts, added salt/sugar, and cow milk before 1 year."),
-    ("💧 Fluids Matter", "Offer sips of water during meals after 6 months. Avoid juice or sugary drinks."),
-    ("🥦 Iron-Rich Foods",
-        "Include lentils, fortified cereals, egg yolks, and pureed meats to support growth."),
-    ("🧠 Brain Boosters", "Avocados, fish (no bones), and breastmilk help brain development."),
-  ];
+class _MoreTipsScreenState extends State<MoreTipsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // First-run only: if nobody has added a tip yet, seed the defaults so
+    // this screen isn't empty before the admin has touched Manage Tips.
+    seedTipsIfEmpty();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("💡 Nutrition Tips")),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          const FunSectionTitle(emoji: "👶", title: "Below 6 Months", color: AppColors.pink),
-          ..._underSix.asMap().entries.map(
-                (e) => TipCard(title: e.value.$1, tip: e.value.$2, color: AppColors.forIndex(e.key)),
-              ),
-          const SizedBox(height: 20),
-          const FunSectionTitle(emoji: "🧒", title: "Above 6 Months", color: AppColors.blue),
-          ..._overSix.asMap().entries.map(
-                (e) => TipCard(title: e.value.$1, tip: e.value.$2, color: AppColors.forIndex(e.key + 2)),
-              ),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('tips').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data!.docs.toList()
+            ..sort((a, b) {
+              final ta = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              final tb = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              if (ta == null || tb == null) return 0;
+              return ta.compareTo(tb);
+            });
+
+          final underSix = docs.where((d) => (d.data() as Map<String, dynamic>)['category'] == 'under_six').toList();
+          final overSix = docs.where((d) => (d.data() as Map<String, dynamic>)['category'] == 'over_six').toList();
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Text("No tips yet — check back soon!", style: TextStyle(color: Colors.grey[600])),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              if (underSix.isNotEmpty) ...[
+                const FunSectionTitle(emoji: "👶", title: "Below 6 Months", color: AppColors.pink),
+                ...underSix.asMap().entries.map((e) {
+                  final data = e.value.data() as Map<String, dynamic>;
+                  return TipCard(
+                    title: data['title'] ?? '',
+                    tip: data['body'] ?? '',
+                    color: AppColors.forIndex(e.key),
+                  );
+                }),
+                const SizedBox(height: 20),
+              ],
+              if (overSix.isNotEmpty) ...[
+                const FunSectionTitle(emoji: "🧒", title: "Above 6 Months", color: AppColors.blue),
+                ...overSix.asMap().entries.map((e) {
+                  final data = e.value.data() as Map<String, dynamic>;
+                  return TipCard(
+                    title: data['title'] ?? '',
+                    tip: data['body'] ?? '',
+                    color: AppColors.forIndex(e.key + 2),
+                  );
+                }),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

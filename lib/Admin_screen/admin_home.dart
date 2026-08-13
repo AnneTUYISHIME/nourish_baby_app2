@@ -7,7 +7,7 @@ import 'meals_week.dart';
 import 'Admin_healthTracker.dart';
 import 'growth_status.dart';
 import '../screens/feedback_screen.dart';
-import '../screens/more_tips.dart';
+import 'manage_tips_screen.dart';
 import '../screens/settings_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -136,11 +136,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _buildDrawerItem(
               context,
               Icons.lightbulb,
-              "Tips & Articles",
+              "Manage Tips",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MoreTipsScreen()),
+                  MaterialPageRoute(builder: (context) => const ManageTipsScreen()),
                 );
               },
             ),

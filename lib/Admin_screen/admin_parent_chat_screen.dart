@@ -21,6 +21,11 @@ class _AdminParentChatScreenState extends State<AdminParentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // "unknown" is the bucket for messages sent before chat threads were
+  // tagged with a parentId — there's no real parent id to filter/tag by,
+  // so we read/write those without a parentId field at all.
+  bool get _isLegacyThread => widget.parentId == 'unknown';
+
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
@@ -29,8 +34,8 @@ class _AdminParentChatScreenState extends State<AdminParentChatScreen> {
     await _firestore.collection('feedback_chat').add({
       'sender': 'admin',
       'message': message,
-      'parentId': widget.parentId,
-      'parentName': widget.parentName,
+      if (!_isLegacyThread) 'parentId': widget.parentId,
+      if (!_isLegacyThread) 'parentName': widget.parentName,
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
@@ -50,18 +55,19 @@ class _AdminParentChatScreenState extends State<AdminParentChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // No orderBy here on purpose — combining it with the where()
-              // below would require a Firestore composite index. Sorted in
-              // Dart instead.
-              stream: _firestore
-                  .collection('feedback_chat')
-                  .where('parentId', isEqualTo: widget.parentId)
-                  .snapshots(),
+              // No orderBy here on purpose — combining it with a where()
+              // would require a Firestore composite index. Filtered/sorted
+              // in Dart instead.
+              stream: _firestore.collection('feedback_chat').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final messages = snapshot.data!.docs.toList()
+                final messages = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final parentId = data['parentId'] as String?;
+                  return _isLegacyThread ? parentId == null : parentId == widget.parentId;
+                }).toList()
                   ..sort((a, b) {
                     final ta = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
                     final tb = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
